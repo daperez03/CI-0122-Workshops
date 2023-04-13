@@ -101,7 +101,7 @@ int main(int argc, char ** argv) {
   int st = -1;
   ShM papa_shm(sizeof(Papa));
   Papa* papa = reinterpret_cast<Papa*>(papa_shm.attach());
-  papa->players = 10;
+  papa->players = 100;
   papa->rotacion = -1;
   papa->value = 2023;
   srand(time(NULL));

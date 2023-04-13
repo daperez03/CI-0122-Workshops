@@ -114,6 +114,8 @@ int main(int argc, char** argv) {
   std::vector<Pthread> miembros(papa.miembros);
   std::vector<private_data> private_data(papa.miembros);
 
+  std::cout << "Creando una ronda de " << miembros_count
+    <<" participantes" << std::endl;
   // Inicializa cada hilo con su respectiva posicion y su estrcutura
   for (size_t i = 0; i < miembros_count; ++i) {
     miembros[i] = Pthread(i);
@@ -133,7 +135,10 @@ int main(int argc, char** argv) {
   // Signal para el inicio del juego entre el resto de hilos
   // Se elige quien inicia mediante un random
   srand(time(NULL));
-  private_data[rand() % miembros_count].hilo->signal();
+  size_t first = rand() % miembros_count;
+  std::cout << "Receptor del primer mensaje " << first
+      << ", valor de la papa " << papa.value << std::endl;
+  private_data[first].hilo->signal();
 
   // Hilo principal espera que el resto de hilos finalicen el juego
   for (size_t i = 0; i < miembros_count; ++i) {

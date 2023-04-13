@@ -89,7 +89,7 @@ int MailBox::send( long type, void * buffer, int numBytes ) {
 
    // use msgsnd system call to send message to a queue
    st = msgsnd(this->id, (void*)&m, sizeof(m.data), 0);
-   if ( -1 == st && errno != EINVAL ) {
+   if ( -1 == st && errno != EINVAL && errno != EIDRM) {
       std::cout << errno << std::endl;
       perror( "MailBox::send" );
       exit( -1 );

@@ -22,7 +22,7 @@
 
 /// @brief Atributos de la papa.
 struct Papa{
-  size_t players = 10;
+  size_t players = 100;
   ssize_t value = 2026;
   ssize_t rotacion = -1;
 };
