@@ -66,8 +66,7 @@ static void WriteDone(void* arg) { writeDone->V(); }
 //----------------------------------------------------------------------
 
 void 
-ConsoleTest (const char *in, const char *out)
-{
+ConsoleTest (const char *in, const char *out) {
     char ch;
 
     console = new Console(in, out, ReadAvail, WriteDone, 0);

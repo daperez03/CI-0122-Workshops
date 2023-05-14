@@ -217,7 +217,7 @@ Socket_t Socket( int family, int type );
 int Connect( Socket_t SockId, char * IP_Addr, int port );
 
 /*  Binds a port to the calling thread */
-int Bind( Socket_t SockId, int port );
+int Bind(Socket_t SockId, int port);
 
 /* Listens for connections and define a backlog queue */
 int Listen( Socket_t SockId, int backlog );

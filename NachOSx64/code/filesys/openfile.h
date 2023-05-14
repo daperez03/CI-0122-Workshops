@@ -32,7 +32,7 @@ class OpenFile {
     ~OpenFile() { Close(file); }			// close the file
 
     int ReadAt(char *into, int numBytes, int position) { 
-    		Lseek(file, position, 0); 
+    		Lseek(file, position, 0);
 		return ReadPartial(file, into, numBytes); 
 		}	
     int WriteAt(const char *from, int numBytes, int position) { 

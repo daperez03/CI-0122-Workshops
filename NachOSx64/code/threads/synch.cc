@@ -235,9 +235,9 @@ void Mutex::Unlock() {
 
 
 // Barrier class
-Barrier::Barrier( const char * debugName, int count ) {
-    this->name;
-    this->size = count;
+Barrier::Barrier(const char * debugName, int count) {
+    // this->name;
+    this->size = (size_t)count;
     this->queue = new List<Thread*>;
 }
 

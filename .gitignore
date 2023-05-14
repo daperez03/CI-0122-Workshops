@@ -4,4 +4,5 @@ doc/
 bin/
 build
 .vscode
-
+*.coff
+*.txt

@@ -153,7 +153,7 @@ class Machine {
 // Note that *all* communication between the user program and the kernel 
 // are in terms of these data structures.
 
-    char *mainMemory;		// physical memory to store user program,
+    char* mainMemory;		// physical memory to store user program,
 				// code and data, while executing
     int registers[NumTotalRegs]; // CPU registers, for executing user programs
 

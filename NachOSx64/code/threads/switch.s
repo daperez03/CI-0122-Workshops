@@ -39,10 +39,8 @@
 
 #ifdef HOST_i386
         .text
-        .align  2
-
-        .globl  ThreadRoot
-
+ 
+ 
 /* void ThreadRoot( void )
 **
 ** expects the following registers to be initialized:

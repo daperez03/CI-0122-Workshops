@@ -25,8 +25,7 @@ static const char* exceptionNames[] = { "no exception", "syscall",
 //----------------------------------------------------------------------
 
 static
-void CheckEndian()
-{
+void CheckEndian() {
     union checkit {
         char charword[4];
         unsigned int intword;
@@ -52,8 +51,7 @@ void CheckEndian()
 //		is executed.
 //----------------------------------------------------------------------
 
-Machine::Machine(bool debug)
-{
+Machine::Machine(bool debug) {
     int i;
 
     for (i = 0; i < NumTotalRegs; i++)
@@ -80,8 +78,7 @@ Machine::Machine(bool debug)
 // 	De-allocate the data structures used to simulate user program execution.
 //----------------------------------------------------------------------
 
-Machine::~Machine()
-{
+Machine::~Machine() {
     delete [] mainMemory;
     if (tlb != NULL)
         delete [] tlb;
@@ -98,8 +95,7 @@ Machine::~Machine()
 //----------------------------------------------------------------------
 
 void
-Machine::RaiseException(ExceptionType which, int badVAddr)
-{
+Machine::RaiseException(ExceptionType which, int badVAddr) {
     DEBUG('m', "Exception: %s\n", exceptionNames[which]);
     
 //  ASSERT(interrupt->getStatus() == UserMode);
@@ -120,8 +116,7 @@ Machine::RaiseException(ExceptionType which, int badVAddr)
 //	So just allow single-stepping, and printing the contents of memory.
 //----------------------------------------------------------------------
 
-void Machine::Debugger()
-{
+void Machine::Debugger() {
     char *buf = new char[80];
     int num;
 
@@ -161,8 +156,7 @@ void Machine::Debugger()
 //----------------------------------------------------------------------
 
 void
-Machine::DumpState()
-{
+Machine::DumpState() {
     int i;
     
     printf("Machine registers:\n");
@@ -199,16 +193,14 @@ Machine::DumpState()
 //   	Fetch or write the contents of a user program register.
 //----------------------------------------------------------------------
 
-int Machine::ReadRegister(int num)
-    {
+int Machine::ReadRegister(int num){
 	ASSERT((num >= 0) && (num < NumTotalRegs));
 	return registers[num];
-    }
+}
 
-void Machine::WriteRegister(int num, int value)
-    {
+void Machine::WriteRegister(int num, int value) {
 	ASSERT((num >= 0) && (num < NumTotalRegs));
 	// DEBUG('m', "WriteRegister %d, value %d\n", num, value);
 	registers[num] = value;
-    }
+}
 
