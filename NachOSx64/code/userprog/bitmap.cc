@@ -72,8 +72,7 @@ BitMap::Clear(int which)
 //----------------------------------------------------------------------
 
 bool 
-BitMap::Test(int which)
-{
+BitMap::Test(int which) {
     ASSERT(which >= 0 && which < numBits);
     
     if (map[which / BitsInWord] & (1 << (which % BitsInWord)))
@@ -92,8 +91,7 @@ BitMap::Test(int which)
 //----------------------------------------------------------------------
 
 int 
-BitMap::Find() 
-{
+BitMap::Find() {
     for (int i = 0; i < numBits; i++)
 	if (!Test(i)) {
 	    Mark(i);
