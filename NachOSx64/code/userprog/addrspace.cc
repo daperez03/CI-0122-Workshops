@@ -146,27 +146,22 @@ AddrSpace::AddrSpace(const AddrSpace& father) {
   this->numPages = father.numPages;
   this->pageTable = new TranslationEntry[numPages];
   int stackPagesInit = this->numPages - divRoundUp(UserStackSize, PageSize);
+  ASSERT(divRoundUp(UserStackSize, PageSize) <= physicalPageMap->NumClear());
   for (int i = 0; i < (int)this->numPages; ++i) {
-    if (i >= stackPagesInit - 1) {
+    if (i >= stackPagesInit) {
       this->pageTable[i].physicalPage = physicalPageMap->Find();
       bzero(machine->mainMemory + this->pageTable[i].physicalPage
         * PageSize, PageSize);
-      // void* dest = &machine->mainMemory
-      //   [this->pageTable[i].physicalPage * PageSize];
-      // void* src = &machine->mainMemory
-      //   [father.pageTable[i].physicalPage * PageSize];
-      // memcpy(dest, src, PageSize);
     } else {
       this->pageTable[i].physicalPage = father.pageTable[i].physicalPage;
     }
     this->pageTable[i].virtualPage = father.pageTable[i].virtualPage;
-    this->pageTable[i].valid = true;
-    this->pageTable[i].use = false;
-    this->pageTable[i].dirty = false;
-    this->pageTable[i].readOnly = false;
+    this->pageTable[i].valid = father.pageTable[i].valid;
+    this->pageTable[i].use = father.pageTable[i].use;
+    this->pageTable[i].dirty = father.pageTable[i].dirty;
+    this->pageTable[i].readOnly = father.pageTable[i].readOnly;
   }
 }
-
 
 //----------------------------------------------------------------------
 // AddrSpace::~AddrSpace
@@ -174,7 +169,7 @@ AddrSpace::AddrSpace(const AddrSpace& father) {
 //----------------------------------------------------------------------
 
 AddrSpace::~AddrSpace() {
-  delete pageTable;
+  if (!this->isSon) delete pageTable;
 }
 
 //----------------------------------------------------------------------

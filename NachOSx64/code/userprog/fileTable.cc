@@ -1,10 +1,22 @@
-#include "filesTable.h"
 #include <iostream>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include "fileTable.h"
+#include "syscall.h"
+
 
 NachosOpenFilesTable::NachosOpenFilesTable() {
   this->openFiles = new int(TABLE_SIZE);
   this->openFilesMap = new BitMap(TABLE_SIZE);
   this->usage = 1;
+  // Asignar stdin, stdout & stderr
+  this->openFiles[0] = 0; //stdin
+  this->openFiles[1] = 1; // stdout
+  this->openFiles[2] = 2; // stderr
+  this->openFilesMap->Mark(0); // Mark stdin like used
+  this->openFilesMap->Mark(1); // Mark stdout like used
+  this->openFilesMap->Mark(2); // Mark stderr like used
 }
 
 NachosOpenFilesTable::~NachosOpenFilesTable() {
@@ -55,7 +67,7 @@ void NachosOpenFilesTable::Print() {
   printf("nachOS FD\tUnix FD\n");
   for (size_t i = 0; i < TABLE_SIZE; ++i) {
     if (this->openFilesMap->Test(i)) {
-      printf("%i\t%i\n", i, this->openFiles[i]);
+      printf("%li\t%i\n", i, this->openFiles[i]);
     }
   }
 }

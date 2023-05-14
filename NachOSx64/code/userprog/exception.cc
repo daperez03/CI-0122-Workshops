@@ -21,11 +21,20 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include "copyright.h"
+#include "addrspace.h"
 #include "system.h"
 #include "syscall.h"
+#include "synch.h"
+#include "bitmap.h"
+#include "fileTable.h"
 
 //____________________________Macros______________________________________________
 /// Utilizado para obtener los valores de parametro
@@ -62,6 +71,30 @@ int WriteMem(int addr, int bytes, char* src) {
     error = !machine->WriteMem(addrIterator, 1, value) || error;
   }
   return (error ? -1 : 0);
+}
+
+void ShareResources(Thread* src, Thread* dst) {
+  dst->fileTable = src->fileTable;
+  dst->fileTable->addThread();
+}
+
+// Coloca en machine el programa a ejcutar
+void NachOSForkThread(void * addr) {
+  // Tomamos el space del hilo actual
+  AddrSpace* space = currentThread->space;
+  // Inicializamos los registros de este
+  space->InitRegisters();
+  // Restauramos el estado del hilo
+  space->RestoreState();
+  // Asignamos la direccion de retorno
+  machine->WriteRegister(RetAddrReg, 4);
+  // Escribimos el addres sobre PCReg
+  machine->WriteRegister(PCReg, (long)addr);
+  // Incrementamos el PCReg en 4
+  machine->WriteRegister(NextPCReg, (long)addr + 4);
+  // Una vez todo este cargado ejecutamos
+  machine->Run();
+  ASSERT(false);
 }
 
 //________________________________System calls_______________________________________
@@ -124,6 +157,7 @@ void NachOS_Open() {		// System call 5
   status = ReadMem(buffer_addr, BUFFER_SIZE, buffer);
   if(status == EXIT_SUCCESS) {
     OpenFileId fd = open(buffer, O_RDWR);
+    if (fd != -1) fd = currentThread->fileTable->Open(fd);
     status = fd;
   }
   RETURN(status);
@@ -139,17 +173,17 @@ void NachOS_Write() {		// System call 6
   int size = READ_PARAM(2);
   OpenFileId fd = READ_PARAM(3);
   // Verificamos que no escriba sobre el archivo de entrada
-  if (fd != ConsoleInput) {
+  if (fd != ConsoleInput && currentThread->fileTable->isOpened(fd)) {
     // Pasamos datos de una direccion de memoria de NachOS a una de linux
     // char* buffer = new char(size);
     char buffer[size];
     status = ReadMem(buffer_addr, size, buffer);
+    fd = currentThread->fileTable->getUnixHandle(fd);
     if (status == EXIT_SUCCESS) {
       if (fd == ConsoleOutput) printf("%s", buffer);
       else if (fd == ConsoleError) fprintf(stderr, "%s", buffer);
       else status = write(fd, buffer, size);
     }
-    // delete buffer;
   }
   RETURN(status);
 }
@@ -164,11 +198,13 @@ void NachOS_Read() {  // System call 7
   int size = READ_PARAM(2);
   OpenFileId fd = READ_PARAM(3);
   // Verificamos que no lea sobre el archivo de salida o error
-  if (fd != ConsoleOutput && fd != ConsoleError) {
+  if (fd != ConsoleOutput && fd != ConsoleError
+    && currentThread->fileTable->isOpened(fd)) {
     // Leemos datos desde linux
     // char* buffer = new char(size);
     char buffer[size];
     memset(buffer, 0, size);
+    fd = currentThread->fileTable->getUnixHandle(fd);
     status = read(fd, buffer, size);
     if (status != EXIT_FAILURE) {
       // Pasamos los datos a la memoria de NachOS
@@ -185,7 +221,10 @@ void NachOS_Read() {  // System call 7
 void NachOS_Close() {		// System call 8
   int status = -1;
   OpenFileId fd = READ_PARAM(1);
-  status = fd;
+  if (currentThread->fileTable->isOpened(fd)) {
+    fd = currentThread->fileTable->getUnixHandle(fd);
+    status = close(fd);
+  }
   RETURN(status);
 }
 
@@ -194,29 +233,23 @@ void NachOS_Close() {		// System call 8
  *  System call interface: void Fork( void (*func)() )
  */
 void NachOS_Fork() {		// System call 9
-  int funccion = READ_PARAM(1);
   DEBUG( 'u', "Entering Fork System call\n" );
-	// We need to create a new kernel thread to execute the user thread
-	Thread * newT = new Thread( "child to execute Fork code" );
-
-	// We need to share the Open File Table structure with this new child
-
-	// Child and father will also share the same address space, except for the stack
-	// Text, init data and uninit data are shared, a new stack area must be created
-	// for the new child
-	// We suggest the use of a new constructor in AddrSpace class,
-	// This new constructor will copy the shared segments (space variable) from currentThread, passed
-	// as a parameter, and create a new stack for the new child
-	newT->space = new AddrSpace( currentThread->space );
-
-	// We (kernel)-Fork to a new method to execute the child code
-	// Pass the user routine address, now in register 4, as a parameter
-	// Note: in 64 bits register 4 need to be casted to (void *)
-	newT->Fork( NachosForkThread, machine->ReadRegister( 4 ) );
-
-	returnFromSystemCall();	// This adjust the PrevPC, PC, and NextPC registers
-
-	DEBUG( 'u', "Exiting Fork System call\n" );
+  // We need to create a new kernel thread to execute the user thread
+  Thread* newThread = new Thread("Child to execute Fork");
+  // We need to share the Open File Table structure with this new child
+  ShareResources(currentThread, newThread);
+  // Child and father will also share the same address space, except for the stack
+  // Text, init data and uninit data are shared, a new stack area must be created
+  // for the new child
+  // We suggest the use of a new constructor in AddrSpace class,
+  // This new constructor will copy the shared segments (space variable) from currentThread, passed
+  // as a parameter, and create a new stack for the new child
+  newThread->space = new AddrSpace(*currentThread->space);
+  // We (kernel)-Fork to a new method to execute the child code
+  // Pass the user routine address, now in register 4, as a parameter
+  // Note: in 64 bits register 4 need to be casted to (void *)
+  newThread->Fork(NachOSForkThread, (void*)READ_PARAM(1));
+  DEBUG( 'u', "Exiting Fork System call\n" );
 }
 
 

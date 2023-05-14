@@ -5,8 +5,6 @@
 
 #define TABLE_SIZE 100
 
-class BitMap;
-
 class NachosOpenFilesTable {
   public:
     NachosOpenFilesTable();						// Initialize
