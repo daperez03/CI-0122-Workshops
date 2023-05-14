@@ -28,8 +28,7 @@ static void Mult(int a, int b, bool signedArith, int* hiPtr, int* loPtr);
 //----------------------------------------------------------------------
 
 void
-Machine::Run()
-{
+Machine::Run() {
     Instruction *instr = new Instruction;  // storage for decoded instruction
 
     if(DebugIsEnabled('m'))
@@ -41,7 +40,7 @@ Machine::Run()
 	interrupt->OneTick();
 	if (singleStep && (runUntilTime <= stats->totalTicks))
 	  Debugger();
-    }
+  }
 }
 
 
