@@ -20,4 +20,4 @@
 ../machine/machine.cc
 ../machine/mipssim.cc
 ../machine/translate.cc
-../userprog/filesTable.cc
+../userprog/fileTable.cc
