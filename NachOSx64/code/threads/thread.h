@@ -39,6 +39,7 @@
 
 #include "copyright.h"
 #include "utility.h"
+#include "../userprog/fileTable.h"
 
 #ifdef USER_PROGRAM
 #include "machine.h"
@@ -122,8 +123,8 @@ class Thread {
   public:
     void SaveUserState();		// save user-level register state
     void RestoreUserState();		// restore user-level register state
-
-    AddrSpace *space;			// User code this thread is running.
+    AddrSpace* space;			// User code this thread is running.
+    NachosOpenFilesTable* fileTable;
 #endif
 };
 

@@ -32,14 +32,14 @@ const unsigned STACK_FENCEPOST = 0xdeadbeef;
 //	"threadName" is an arbitrary string, useful for debugging.
 //----------------------------------------------------------------------
 
-Thread::Thread(const char* threadName)
-{
+Thread::Thread(const char* threadName) {
     name = threadName;
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
 #ifdef USER_PROGRAM
     space = NULL;
+    fileTable = NULL;
 #endif
 }
 
@@ -84,9 +84,7 @@ Thread::~Thread()
 //	"arg" is a single argument to be passed to the procedure.
 //----------------------------------------------------------------------
 
-void 
-Thread::Fork(VoidFunctionPtr func, void* arg)
-{
+void Thread::Fork(VoidFunctionPtr func, void* arg) {
 #ifdef HOST_x86_64
     DEBUG('t', "Forking thread \"%s\" with func = 0x%lx, arg = %ld\n",
 	  name, (HostMemoryAddress) func, arg);
