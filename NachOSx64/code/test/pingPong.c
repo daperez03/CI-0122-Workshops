@@ -5,8 +5,8 @@ void SimpleThread(int);
 int
 main( int argc, char * argv[] ) {
 
-    Fork(SimpleThread);
-    SimpleThread(1);
+    // Fork(SimpleThread);
+    // SimpleThread(1);
 
     Write("Main  \n", 7, 1);
     Write(argc, 4, 1);

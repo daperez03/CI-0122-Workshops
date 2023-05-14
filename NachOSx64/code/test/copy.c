@@ -8,7 +8,7 @@ main()
     char buffer[1024];
     int n = 0;
 
-
+    Create( "nachos.1" );
     Create( "nachos.2" );
     input  = Open( "nachos.1" );
     output = Open( "nachos.2" );
