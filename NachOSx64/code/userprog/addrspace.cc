@@ -27,19 +27,17 @@
 //	endian machine, and we're now running on a big endian machine.
 //----------------------------------------------------------------------
 
-static void 
-SwapHeader (NoffHeader *noffH)
-{
-	noffH->noffMagic = WordToHost(noffH->noffMagic);
-	noffH->code.size = WordToHost(noffH->code.size);
-	noffH->code.virtualAddr = WordToHost(noffH->code.virtualAddr);
-	noffH->code.inFileAddr = WordToHost(noffH->code.inFileAddr);
-	noffH->initData.size = WordToHost(noffH->initData.size);
-	noffH->initData.virtualAddr = WordToHost(noffH->initData.virtualAddr);
-	noffH->initData.inFileAddr = WordToHost(noffH->initData.inFileAddr);
-	noffH->uninitData.size = WordToHost(noffH->uninitData.size);
-	noffH->uninitData.virtualAddr = WordToHost(noffH->uninitData.virtualAddr);
-	noffH->uninitData.inFileAddr = WordToHost(noffH->uninitData.inFileAddr);
+static void SwapHeader (NoffHeader *noffH) {
+  noffH->noffMagic = WordToHost(noffH->noffMagic);
+  noffH->code.size = WordToHost(noffH->code.size);
+  noffH->code.virtualAddr = WordToHost(noffH->code.virtualAddr);
+  noffH->code.inFileAddr = WordToHost(noffH->code.inFileAddr);
+  noffH->initData.size = WordToHost(noffH->initData.size);
+  noffH->initData.virtualAddr = WordToHost(noffH->initData.virtualAddr);
+  noffH->initData.inFileAddr = WordToHost(noffH->initData.inFileAddr);
+  noffH->uninitData.size = WordToHost(noffH->uninitData.size);
+  noffH->uninitData.virtualAddr = WordToHost(noffH->uninitData.virtualAddr);
+  noffH->uninitData.inFileAddr = WordToHost(noffH->uninitData.inFileAddr);
 }
 
 //----------------------------------------------------------------------
@@ -56,73 +54,127 @@ SwapHeader (NoffHeader *noffH)
 //
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
+AddrSpace::AddrSpace(OpenFile* executable) {
+  NoffHeader noffH;
+  unsigned int size;
 
-AddrSpace::AddrSpace(OpenFile *executable)
-{
-    NoffHeader noffH;
-    unsigned int i, size;
+  executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
+  if ((noffH.noffMagic != NOFFMAGIC) &&
+    (WordToHost(noffH.noffMagic) == NOFFMAGIC))
+    SwapHeader(&noffH);
+  ASSERT(noffH.noffMagic == NOFFMAGIC);
 
-    executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
-    if ((noffH.noffMagic != NOFFMAGIC) && 
-		(WordToHost(noffH.noffMagic) == NOFFMAGIC))
-    	SwapHeader(&noffH);
-    ASSERT(noffH.noffMagic == NOFFMAGIC);
+  // how big is address space?
+  size = noffH.code.size + noffH.initData.size
+    + noffH.uninitData.size + UserStackSize;	// we need to increase the size
+  // to leave room for the stack
+  numPages = divRoundUp(size, PageSize);
+  size = numPages * PageSize;
 
-// how big is address space?
-    size = noffH.code.size + noffH.initData.size + noffH.uninitData.size 
-			+ UserStackSize;	// we need to increase the size
-						// to leave room for the stack
-    numPages = divRoundUp(size, PageSize);
-    size = numPages * PageSize;
+  ASSERT(numPages <= NumPhysPages);		// check we're not trying
+  ASSERT((int)numPages <= physicalPageMap->NumClear());
+  // to run anything too big --
+  // at least until we have
+  // virtual memory
 
-    ASSERT(numPages <= NumPhysPages);		// check we're not trying
-						// to run anything too big --
-						// at least until we have
-						// virtual memory
-
-    DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
-					numPages, size);
-// first, set up the translation 
-    pageTable = new TranslationEntry[numPages];
-    for (i = 0; i < numPages; i++) {
-	pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
-	pageTable[i].physicalPage = i;
-	pageTable[i].valid = true;
-	pageTable[i].use = false;
-	pageTable[i].dirty = false;
-	pageTable[i].readOnly = false;  // if the code segment was entirely on 
-					// a separate page, we could set its 
-					// pages to be read-only
+  DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
+    numPages, size);
+  // first, set up the translation 
+  this->pageTable = new TranslationEntry[numPages];
+  for (size_t i = 0; i < numPages; ++i) {
+    this->pageTable[i].virtualPage = i;	// for now, virtual page # = phys page #
+    this->pageTable[i].physicalPage = physicalPageMap->Find();
+    this->pageTable[i].valid = true;
+    this->pageTable[i].use = false;
+    this->pageTable[i].dirty = false;
+    this->pageTable[i].readOnly = false;  // if the code segment was entirely on
+    bzero(machine->mainMemory + this->pageTable[i].physicalPage * PageSize, PageSize);
+  }
+  int pageCount = 0;
+  bool dataMerge = false; 
+  int byteCount = 0;
+  int pageNum = divRoundUp(noffH.code.size, PageSize);
+  if (pageNum > 0) {
+    DEBUG('a', "Initializing code segment, at 0x%x, size %d\n", 
+      noffH.code.virtualAddr, noffH.code.size);
+    for (int i = 0; i < pageNum; ++i) {
+      int numBytes = PageSize;
+      int place = this->pageTable[pageCount++].physicalPage * PageSize;
+      char* into = &machine->mainMemory[place];
+      int position = noffH.code.inFileAddr + byteCount;
+      byteCount += PageSize;
+      if (byteCount > noffH.code.size) {
+        numBytes = PageSize - (noffH.code.size % PageSize);
+        dataMerge = true;
+      }
+      executable->ReadAt(into, numBytes, position);
     }
-    
-// zero out the entire address space, to zero the unitialized data segment 
-// and the stack segment
-    bzero(machine->mainMemory, size);
-
-// then, copy in the code and data segments into memory
-    if (noffH.code.size > 0) {
-        DEBUG('a', "Initializing code segment, at 0x%x, size %d\n", 
-			noffH.code.virtualAddr, noffH.code.size);
-        executable->ReadAt(&(machine->mainMemory[noffH.code.virtualAddr]),
-			noffH.code.size, noffH.code.inFileAddr);
+  }
+  byteCount = 0;
+  pageNum = noffH.initData.size - (noffH.code.size % PageSize);
+  if(pageNum < 0) pageNum = 0;
+  pageNum = divRoundUp(pageNum, PageSize);
+  if (dataMerge && noffH.initData.size) {
+    int position = noffH.initData.inFileAddr;
+    int numBytes = noffH.code.size % PageSize;
+    if (numBytes > noffH.initData.size) numBytes = noffH.initData.size;
+    char* into = &machine->mainMemory[this->pageTable[pageCount - 1].physicalPage
+      * PageSize + (PageSize - noffH.code.size % PageSize)];
+    executable->ReadAt(into, numBytes, position);
+    byteCount += numBytes;
+  }
+  if (pageNum > 0) {
+    DEBUG('a', "Initializing data segment, at 0x%x, size %d\n", 
+      noffH.initData.virtualAddr, noffH.initData.size);
+    for (int i = 0; i < pageNum; ++i) {
+      char* into = &machine->mainMemory
+        [this->pageTable[pageCount++].physicalPage * PageSize];
+      int position = noffH.initData.inFileAddr + byteCount;
+      byteCount += PageSize;
+      if (byteCount > noffH.initData.size) {
+        int numBytes = PageSize - (byteCount - noffH.initData.size);
+        executable->ReadAt(into, numBytes, position);
+      } else {
+        executable->ReadAt(into, PageSize, position);
+      }
     }
-    if (noffH.initData.size > 0) {
-        DEBUG('a', "Initializing data segment, at 0x%x, size %d\n", 
-			noffH.initData.virtualAddr, noffH.initData.size);
-        executable->ReadAt(&(machine->mainMemory[noffH.initData.virtualAddr]),
-			noffH.initData.size, noffH.initData.inFileAddr);
-    }
-
+  }
 }
+
+AddrSpace::AddrSpace(const AddrSpace& father) {
+  this->isSon = true;
+  this->numPages = father.numPages;
+  this->pageTable = new TranslationEntry[numPages];
+  int stackPagesInit = this->numPages - divRoundUp(UserStackSize, PageSize);
+  for (int i = 0; i < (int)this->numPages; ++i) {
+    if (i >= stackPagesInit - 1) {
+      this->pageTable[i].physicalPage = physicalPageMap->Find();
+      bzero(machine->mainMemory + this->pageTable[i].physicalPage
+        * PageSize, PageSize);
+      // void* dest = &machine->mainMemory
+      //   [this->pageTable[i].physicalPage * PageSize];
+      // void* src = &machine->mainMemory
+      //   [father.pageTable[i].physicalPage * PageSize];
+      // memcpy(dest, src, PageSize);
+    } else {
+      this->pageTable[i].physicalPage = father.pageTable[i].physicalPage;
+    }
+    this->pageTable[i].virtualPage = father.pageTable[i].virtualPage;
+    this->pageTable[i].valid = true;
+    this->pageTable[i].use = false;
+    this->pageTable[i].dirty = false;
+    this->pageTable[i].readOnly = false;
+  }
+}
+
 
 //----------------------------------------------------------------------
 // AddrSpace::~AddrSpace
 // 	Dealloate an address space.  Nothing for now!
 //----------------------------------------------------------------------
 
-AddrSpace::~AddrSpace()
-{
-   delete pageTable;
+AddrSpace::~AddrSpace() {
+  delete pageTable;
 }
 
 //----------------------------------------------------------------------
@@ -135,26 +187,24 @@ AddrSpace::~AddrSpace()
 //	when this thread is context switched out.
 //----------------------------------------------------------------------
 
-void
-AddrSpace::InitRegisters()
-{
-    int i;
+void AddrSpace::InitRegisters() {
+  int i;
 
-    for (i = 0; i < NumTotalRegs; i++)
-	machine->WriteRegister(i, 0);
+  for (i = 0; i < NumTotalRegs; i++)
+	  machine->WriteRegister(i, 0);
 
-    // Initial program counter -- must be location of "Start"
-    machine->WriteRegister(PCReg, 0);	
+  // Initial program counter -- must be location of "Start"
+  machine->WriteRegister(PCReg, 0);	
 
-    // Need to also tell MIPS where next instruction is, because
-    // of branch delay possibility
-    machine->WriteRegister(NextPCReg, 4);
+  // Need to also tell MIPS where next instruction is, because
+  // of branch delay possibility
+  machine->WriteRegister(NextPCReg, 4);
 
-   // Set the stack register to the end of the address space, where we
-   // allocated the stack; but subtract off a bit, to make sure we don't
-   // accidentally reference off the end!
-    machine->WriteRegister(StackReg, numPages * PageSize - 16);
-    DEBUG('a', "Initializing stack register to %d\n", numPages * PageSize - 16);
+  // Set the stack register to the end of the address space, where we
+  // allocated the stack; but subtract off a bit, to make sure we don't
+  // accidentally reference off the end!
+  machine->WriteRegister(StackReg, numPages * PageSize - 16);
+  DEBUG('a', "Initializing stack register to %d\n", numPages * PageSize - 16);
 }
 
 //----------------------------------------------------------------------
@@ -165,8 +215,9 @@ AddrSpace::InitRegisters()
 //	For now, nothing!
 //----------------------------------------------------------------------
 
-void AddrSpace::SaveState() 
-{}
+void AddrSpace::SaveState() {
+
+}
 
 //----------------------------------------------------------------------
 // AddrSpace::RestoreState
@@ -176,8 +227,7 @@ void AddrSpace::SaveState()
 //      For now, tell the machine where to find the page table.
 //----------------------------------------------------------------------
 
-void AddrSpace::RestoreState() 
-{
-    machine->pageTable = pageTable;
-    machine->pageTableSize = numPages;
+void AddrSpace::RestoreState() {
+  machine->pageTable = pageTable;
+  machine->pageTableSize = numPages;
 }
