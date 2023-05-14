@@ -1,5 +1,6 @@
 #include "syscall.h"
 
+
 int main() {
   char buffer[100];
   int i = 0;
