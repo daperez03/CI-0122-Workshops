@@ -73,29 +73,37 @@ int WriteMem(int addr, int bytes, char* src) {
   return (error ? -1 : 0);
 }
 
+// TODO(me) FINISH FUNCCION
 void ShareResources(Thread* src, Thread* dst) {
   dst->fileTable = src->fileTable;
   dst->fileTable->addThread();
 }
 
-// Coloca en machine el programa a ejcutar
-void NachOSForkThread(void * addr) {
+// Pass the user routine address as a parameter for this function
+// This function is similar to "StartProcess" in "progtest.cc" file under "userprog"
+// Requires a correct AddrSpace setup to work well
+void NachOSForkThread(void * addr) { // for 64 bits version
   // Tomamos el space del hilo actual
   AddrSpace* space = currentThread->space;
-  // Inicializamos los registros de este
-  space->InitRegisters();
-  // Restauramos el estado del hilo
-  space->RestoreState();
-  // Asignamos la direccion de retorno
+  space->InitRegisters(); // set the initial register values
+  space->RestoreState(); // load page table register
+  // Set the return address for this thread to the same as the main thread
+  // This will lead this thread to call the exit system call and finish
   machine->WriteRegister(RetAddrReg, 4);
-  // Escribimos el addres sobre PCReg
   machine->WriteRegister(PCReg, (long)addr);
-  // Incrementamos el PCReg en 4
   machine->WriteRegister(NextPCReg, (long)addr + 4);
-  // Una vez todo este cargado ejecutamos
-  machine->Run();
+  machine->Run(); // jump to the user progam
   ASSERT(false);
 }
+
+// TODO(me) FINISH FUNCCION
+void removeResources(Thread* thread) {
+  thread->fileTable->delThread();
+  delete thread->fileTable;
+  delete thread->space;
+  thread->space = nullptr;
+}
+
 
 //________________________________System calls_______________________________________
 /*
@@ -110,16 +118,24 @@ void NachOS_Halt() {		// System call 0
 /*
  *  System call interface: void Exit( int )
  */
+// TODO(me)
 void NachOS_Exit() {		// System call 1
   // Debemos desacer los recursos y etc
   // Destruir tabla de FD
   // Limpiar memoria de AddrSpace
+  int status = READ_PARAM(1); // Leemos el estado de ejecucion
+  currentThread->Yield(); // Quitamos la CPU
+  removeResources(currentThread); // Eliminamos los recursos del thread
+  NachOS_Halt();
+  // Finish the thread
+   currentThread->Finish();
 }
 
 
 /*
  *  System call interface: SpaceId Exec( char * )
  */
+// TODO(me) FINISH FUNCCION
 void NachOS_Exec() {		// System call 2
 }
 
@@ -127,6 +143,7 @@ void NachOS_Exec() {		// System call 2
 /*
  *  System call interface: int Join( SpaceId )
  */
+// TODO(me) FINISH FUNCCION
 void NachOS_Join() {		// System call 3
 }
 
@@ -236,8 +253,6 @@ void NachOS_Fork() {		// System call 9
   DEBUG( 'u', "Entering Fork System call\n" );
   // We need to create a new kernel thread to execute the user thread
   Thread* newThread = new Thread("Child to execute Fork");
-  // We need to share the Open File Table structure with this new child
-  ShareResources(currentThread, newThread);
   // Child and father will also share the same address space, except for the stack
   // Text, init data and uninit data are shared, a new stack area must be created
   // for the new child
@@ -245,6 +260,8 @@ void NachOS_Fork() {		// System call 9
   // This new constructor will copy the shared segments (space variable) from currentThread, passed
   // as a parameter, and create a new stack for the new child
   newThread->space = new AddrSpace(*currentThread->space);
+  // We need to share the Open File Table structure with this new child
+  ShareResources(currentThread, newThread);
   // We (kernel)-Fork to a new method to execute the child code
   // Pass the user routine address, now in register 4, as a parameter
   // Note: in 64 bits register 4 need to be casted to (void *)
@@ -390,6 +407,8 @@ void NachOS_Accept() {		// System call 34
  *  System call interface: int Shutdown( Socket_t, int )
  */
 void NachOS_Shutdown() {	// System call 25
+  Socket_t socket = READ_PARAM(1); // Obtenemos el socket
+  Socket_t socket = READ_PARAM(1); // Obtenemos el socket
 }
 
 
