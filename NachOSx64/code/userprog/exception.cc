@@ -459,6 +459,7 @@ void NachOS_Bind() {		// System call 32
     }
     status = bind(socketFD, (sockaddr*)ha, len);
   }
+  RETURN(status);
 }
 
 
@@ -466,6 +467,14 @@ void NachOS_Bind() {		// System call 32
  *  System call interface: int Listen( Socket_t, int )
  */
 void NachOS_Listen() {		// System call 33
+  int status = -1;
+  int socketFD = READ_PARAM(1);
+  int numConnection = READ_PARAM(2);
+  if (currentThread->fileTable->isOpened(socketFD)) {
+    socketFD = currentThread->fileTable->getUnixHandle(socketFD);
+    status = listen(socketFD, numConnection);
+  }
+  RETURN(status);
 }
 
 
@@ -474,6 +483,29 @@ void NachOS_Listen() {		// System call 33
  */
 void NachOS_Accept() {		// System call 34
   int  status = -1;
+  int socketFD = READ_PARAM(1);
+  if (currentThread->fileTable->isOpened(socketFD)) {
+    socketFD = currentThread->fileTable->getUnixHandle(socketFD);
+    struct sockaddr addr;
+    socklen_t len = sizeof(addr);
+    getsockname(socketFD, &addr, &len);
+    struct sockaddr* ha;
+    struct sockaddr_in6 peer6;
+    struct sockaddr_in peer4;
+    socklen_t peerLen;
+    if (addr.sa_family == AF_INET6) {
+      peerLen = sizeof(peer6);
+      ha = (sockaddr*) &peer6;
+    } else {
+      peerLen = sizeof(peer4);
+      ha = (sockaddr*) &peer4;
+    }
+    status = accept(socketFD, ha, &peerLen);
+    if (status != -1) {
+      status = currentThread->fileTable->Open(status);
+    }
+  }
+  RETURN(status);
 }
 
 
