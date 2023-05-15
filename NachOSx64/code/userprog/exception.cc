@@ -372,6 +372,20 @@ void NachOS_CondBroadcast() {		// System call 23
  *  System call interface: Socket_t Socket( int, int )
  */
 void NachOS_Socket() {			// System call 30
+  int status = -1;
+  int family = READ_PARAM(1); // Get family
+  int type = READ_PARAM(1); // Get socket type
+  bool canCreateSocket = (family == AF_INET_NachOS ||
+    family == AF_INET6_NachOS) && (type == SOCK_DGRAM_NachOS
+    || type == SOCK_STREAM_NachOS); // if all are ok return true
+  if (canCreateSocket) { // if canCreateSocket is true, so make a socket
+    family = family == AF_INET_NachOS ? AF_INET : AF_INET6;
+    type = type == SOCK_DGRAM_NachOS ? SOCK_DGRAM : SOCK_STREAM;
+    int socket_id = socket(family, type, 0);
+    if (socket_id != -1)
+      status = currentThread->fileTable->Open(socket_id);
+  }
+  RETURN(status); // return socket id or error
 }
 
 
@@ -379,6 +393,39 @@ void NachOS_Socket() {			// System call 30
  *  System call interface: Socket_t Connect( char *, int )
  */
 void NachOS_Connect() {		// System call 31
+  int status = -1;
+  int socketFD = READ_PARAM(1);
+  int addrHost = READ_PARAM(2);
+  int port = READ_PARAM(3);
+  char host[BUFFER_SIZE];
+  status = ReadMem(addrHost, BUFFER_SIZE, host);
+  if (status == EXIT_SUCCESS &&
+    currentThread->fileTable->isOpened(socketFD)) {
+      socketFD = currentThread->fileTable->getUnixHandle(socketFD);
+    struct sockaddr addr;
+    socklen_t len = sizeof(addr);
+    struct sockaddr* ha;
+    struct sockaddr_in6  hostIPv6;
+    struct sockaddr_in  hostIPv4;
+    getsockname(socketFD, &addr, &len);
+    if (addr.sa_family == AF_INET6) {
+      memset(&hostIPv6, 0, sizeof(hostIPv6));
+      hostIPv6.sin6_family = AF_INET6;
+      hostIPv6.sin6_port = htons(port);
+      status = inet_pton(AF_INET6, host, &hostIPv6.sin6_addr);
+      ha = (struct sockaddr *) &hostIPv4;
+      len = sizeof(hostIPv4);
+    } else {
+      memset(&hostIPv4, 0, sizeof(hostIPv4));
+      hostIPv4.sin_family = AF_INET;
+      hostIPv4.sin_port = htons(port);
+      status = inet_pton(AF_INET, host, &hostIPv4.sin_addr);
+      ha = (struct sockaddr *) &hostIPv4;
+      len = sizeof(hostIPv4);
+    }
+    if (status != -1) status = connect(socketFD, ha, len);
+  }
+  RETURN(status);
 }
 
 
@@ -386,6 +433,9 @@ void NachOS_Connect() {		// System call 31
  *  System call interface: int Bind( Socket_t, int )
  */
 void NachOS_Bind() {		// System call 32
+  int status = -1;
+  int socketFD = READ_PARAM(1);
+  int port = READ_PARAM(2);
 }
 
 
@@ -400,6 +450,7 @@ void NachOS_Listen() {		// System call 33
  *  System call interface: int Accept( Socket_t )
  */
 void NachOS_Accept() {		// System call 34
+  int  status = -1;
 }
 
 
@@ -407,8 +458,14 @@ void NachOS_Accept() {		// System call 34
  *  System call interface: int Shutdown( Socket_t, int )
  */
 void NachOS_Shutdown() {	// System call 25
+  int status = -1;
   Socket_t socket = READ_PARAM(1); // Obtenemos el socket
-  Socket_t socket = READ_PARAM(1); // Obtenemos el socket
+  int how = READ_PARAM(2); // Obtenemos el how
+  if (currentThread->fileTable->isOpened(socket)) {
+    socket = currentThread->fileTable->getUnixHandle(socket);
+    if (socket != -1) status = shutdown(socket, how);
+  }
+  RETURN(status);
 }
 
 
