@@ -413,8 +413,8 @@ void NachOS_Connect() {		// System call 31
       hostIPv6.sin6_family = AF_INET6;
       hostIPv6.sin6_port = htons(port);
       status = inet_pton(AF_INET6, host, &hostIPv6.sin6_addr);
-      ha = (struct sockaddr *) &hostIPv4;
-      len = sizeof(hostIPv4);
+      ha = (struct sockaddr *) &hostIPv6;
+      len = sizeof(hostIPv6);
     } else {
       memset(&hostIPv4, 0, sizeof(hostIPv4));
       hostIPv4.sin_family = AF_INET;
@@ -436,6 +436,29 @@ void NachOS_Bind() {		// System call 32
   int status = -1;
   int socketFD = READ_PARAM(1);
   int port = READ_PARAM(2);
+  if (currentThread->fileTable->isOpened(socketFD)) {
+    socketFD = currentThread->fileTable->getUnixHandle(socketFD);
+    struct sockaddr addr;
+    socklen_t len = sizeof(addr);
+    struct sockaddr* ha;
+    struct sockaddr_in6  hostIPv6;
+    struct sockaddr_in  hostIPv4;
+    getsockname(socketFD, &addr, &len);
+    if (addr.sa_family == AF_INET6) {
+      hostIPv6.sin6_family = AF_INET6;
+      hostIPv6.sin6_port = htons(port);
+      hostIPv6.sin6_addr = in6addr_any;
+      ha = (struct sockaddr *) &hostIPv6;
+      len = sizeof(hostIPv4);
+    } else {
+      hostIPv4.sin_family = AF_INET;
+      hostIPv4.sin_port = htons(port);
+      hostIPv4.sin_addr.s_addr = INADDR_ANY;
+      ha = (struct sockaddr *) &hostIPv4;
+      len = sizeof(hostIPv4);
+    }
+    status = bind(socketFD, (sockaddr*)ha, len);
+  }
 }
 
 
