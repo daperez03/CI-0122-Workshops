@@ -118,7 +118,7 @@ void NachOS_Halt() {		// System call 0
 /*
  *  System call interface: void Exit( int )
  */
-// TODO(me)
+/// TODO(ME) completar
 void NachOS_Exit() {		// System call 1
   // Debemos desacer los recursos y etc
   // Destruir tabla de FD
@@ -135,7 +135,7 @@ void NachOS_Exit() {		// System call 1
 /*
  *  System call interface: SpaceId Exec( char * )
  */
-// TODO(me) FINISH FUNCCION
+/// TODO(ME) completar
 void NachOS_Exec() {		// System call 2
 }
 
@@ -143,7 +143,7 @@ void NachOS_Exec() {		// System call 2
 /*
  *  System call interface: int Join( SpaceId )
  */
-// TODO(me) FINISH FUNCCION
+/// TODO(ME) completar
 void NachOS_Join() {		// System call 3
 }
 
@@ -249,6 +249,7 @@ void NachOS_Close() {		// System call 8
 /*
  *  System call interface: void Fork( void (*func)() )
  */
+/// TODO(ME) debuguear
 void NachOS_Fork() {		// System call 9
   DEBUG( 'u', "Entering Fork System call\n" );
   // We need to create a new kernel thread to execute the user thread
@@ -273,6 +274,7 @@ void NachOS_Fork() {		// System call 9
 /*
  *  System call interface: void Yield()
  */
+/// TODO(ME) completar
 void NachOS_Yield() {		// System call 10
 }
 
@@ -280,6 +282,7 @@ void NachOS_Yield() {		// System call 10
 /*
  *  System call interface: Sem_t SemCreate( int )
  */
+/// TODO(ME) completar
 void NachOS_SemCreate() {		// System call 11
 }
 
@@ -287,6 +290,7 @@ void NachOS_SemCreate() {		// System call 11
 /*
  *  System call interface: int SemDestroy( Sem_t )
  */
+/// TODO(ME) completar
 void NachOS_SemDestroy() {		// System call 12
 }
 
@@ -294,6 +298,7 @@ void NachOS_SemDestroy() {		// System call 12
 /*
  *  System call interface: int SemSignal( Sem_t )
  */
+/// TODO(ME) completar
 void NachOS_SemSignal() {		// System call 13
 }
 
@@ -301,6 +306,7 @@ void NachOS_SemSignal() {		// System call 13
 /*
  *  System call interface: int SemWait( Sem_t )
  */
+/// TODO(ME) completar
 void NachOS_SemWait() {		// System call 14
 }
 
@@ -308,6 +314,7 @@ void NachOS_SemWait() {		// System call 14
 /*
  *  System call interface: Lock_t LockCreate( int )
  */
+/// TODO(ME) completar
 void NachOS_LockCreate() {		// System call 15
 }
 
@@ -315,6 +322,7 @@ void NachOS_LockCreate() {		// System call 15
 /*
  *  System call interface: int LockDestroy( Lock_t )
  */
+/// TODO(ME) completar
 void NachOS_LockDestroy() {		// System call 16
 }
 
@@ -322,6 +330,7 @@ void NachOS_LockDestroy() {		// System call 16
 /*
  *  System call interface: int LockAcquire( Lock_t )
  */
+/// TODO(ME) completar
 void NachOS_LockAcquire() {		// System call 17
 }
 
@@ -336,6 +345,7 @@ void NachOS_LockRelease() {		// System call 18
 /*
  *  System call interface: Cond_t LockCreate( int )
  */
+/// TODO(ME) completar
 void NachOS_CondCreate() {		// System call 19
 }
 
@@ -343,6 +353,7 @@ void NachOS_CondCreate() {		// System call 19
 /*
  *  System call interface: int CondDestroy( Cond_t )
  */
+/// TODO(ME) completar
 void NachOS_CondDestroy() {		// System call 20
 }
 
@@ -357,6 +368,7 @@ void NachOS_CondSignal() {		// System call 21
 /*
  *  System call interface: int CondWait( Cond_t )
  */
+/// TODO(ME) completar
 void NachOS_CondWait() {		// System call 22
 }
 
@@ -364,6 +376,7 @@ void NachOS_CondWait() {		// System call 22
 /*
  *  System call interface: int CondBroadcast( Cond_t )
  */
+/// TODO(ME) completar
 void NachOS_CondBroadcast() {		// System call 23
 }
 

@@ -54,6 +54,7 @@ static void SwapHeader (NoffHeader *noffH) {
 //
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
+#include <iostream>
 AddrSpace::AddrSpace(OpenFile* executable) {
   NoffHeader noffH;
   unsigned int size;
@@ -111,6 +112,7 @@ AddrSpace::AddrSpace(OpenFile* executable) {
     }
   }
   byteCount = 0;
+  std::cout << "Code: " << noffH.code.size << "\nInit data: " << noffH.initData.size << std::endl;
   pageNum = noffH.initData.size - (noffH.code.size % PageSize);
   if(pageNum < 0) pageNum = 0;
   pageNum = divRoundUp(pageNum, PageSize);
