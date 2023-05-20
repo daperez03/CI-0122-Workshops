@@ -1,7 +1,7 @@
 # Correcion del Examen #1
 
 ## Enunciado
-En el parque nacional Kruger en Sudáfrica hay un cañón muy profundo que cuenta con varias cuerdas (N) para cruzarlo. Los babuinos necesitan cruzar este cañón utilizando alguna de las cuerdas que les sera asignada de manera aleatoria. Como los babuinos son muy agresivos, hay que esperar a que haya B babuinos para cruzar en un lado del canon, de otra manera, menos que B babuinos, harán pleito, terminarán cayendo por el cañón y muriendo.  
+En el parque nacional Kruger en Sudáfrica hay un cañón muy profundo que cuenta con varias cuerdas (N) para cruzarlo. Los babuinos necesitan cruzar este cañón utilizando alguna de las cuerdas que les sera asignada de manera aleatoria. Como los babuinos son muy agresivos, hay que esperar a que haya B babuinos para cruzar en un lado del canon, de otra manera, menos que B babuinos, harán pleito, terminarán cayendo por el cañón y muriendo.
 
 Si al momento de llegar al cañón un babuino (Babuino ( int cuerda)) determina que no hay B babuidos, incluyendole, espera en la cuerda respectiva; de otra manera determina cuál es la cuerda que tiene más babuinos (Ci) y deja pasar a todos los que esperan por esa cuerda. Mientras están cruzando los babuinos de la cuerda Ci cualquier otro que llegue a esta misma cuerda debera esperar.
 
