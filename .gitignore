@@ -1,3 +1,4 @@
+NachOSx64/code/userprog/nachos
 c++example/
 doc/
 *.o
@@ -6,4 +7,4 @@ build
 .vscode
 *.coff
 *.txt
-nachos
+
