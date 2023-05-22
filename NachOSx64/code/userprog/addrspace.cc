@@ -54,7 +54,6 @@ static void SwapHeader (NoffHeader *noffH) {
 //
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
-#include <iostream>
 AddrSpace::AddrSpace(OpenFile* executable) {
   NoffHeader noffH;
   unsigned int size;
@@ -89,7 +88,8 @@ AddrSpace::AddrSpace(OpenFile* executable) {
     this->pageTable[i].use = false;
     this->pageTable[i].dirty = false;
     this->pageTable[i].readOnly = false;  // if the code segment was entirely on
-    bzero(machine->mainMemory + this->pageTable[i].physicalPage * PageSize, PageSize);
+    bzero(machine->mainMemory + this->pageTable[i].physicalPage
+      * PageSize, PageSize);
   }
   int pageCount = 0;
   bool dataMerge = false; 
@@ -105,23 +105,23 @@ AddrSpace::AddrSpace(OpenFile* executable) {
       int position = noffH.code.inFileAddr + byteCount;
       byteCount += PageSize;
       if (byteCount > noffH.code.size) {
-        numBytes = PageSize - (noffH.code.size % PageSize);
+        numBytes = noffH.code.size % PageSize;
         dataMerge = true;
       }
       executable->ReadAt(into, numBytes, position);
     }
   }
   byteCount = 0;
-  std::cout << "Code: " << noffH.code.size << "\nInit data: " << noffH.initData.size << std::endl;
-  pageNum = noffH.initData.size - (noffH.code.size % PageSize);
+  pageNum = noffH.initData.size - (PageSize - noffH.code.size % PageSize);
   if(pageNum < 0) pageNum = 0;
+  int initDataSize = pageNum;
   pageNum = divRoundUp(pageNum, PageSize);
   if (dataMerge && noffH.initData.size) {
     int position = noffH.initData.inFileAddr;
-    int numBytes = noffH.code.size % PageSize;
+    int numBytes = PageSize - noffH.code.size % PageSize;
     if (numBytes > noffH.initData.size) numBytes = noffH.initData.size;
     char* into = &machine->mainMemory[this->pageTable[pageCount - 1].physicalPage
-      * PageSize + (PageSize - noffH.code.size % PageSize)];
+      * PageSize + (noffH.code.size % PageSize)];
     executable->ReadAt(into, numBytes, position);
     byteCount += numBytes;
   }
@@ -133,12 +133,11 @@ AddrSpace::AddrSpace(OpenFile* executable) {
         [this->pageTable[pageCount++].physicalPage * PageSize];
       int position = noffH.initData.inFileAddr + byteCount;
       byteCount += PageSize;
-      if (byteCount > noffH.initData.size) {
-        int numBytes = PageSize - (byteCount - noffH.initData.size);
-        executable->ReadAt(into, numBytes, position);
-      } else {
-        executable->ReadAt(into, PageSize, position);
+      int numBytes = PageSize;
+      if (byteCount > initDataSize) {
+        numBytes = initDataSize % PageSize;
       }
+      executable->ReadAt(into, numBytes, position);
     }
   }
 }
