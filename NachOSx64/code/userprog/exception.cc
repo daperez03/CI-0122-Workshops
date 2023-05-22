@@ -193,8 +193,10 @@ void NachOS_Write() {		// System call 6
   if (fd != ConsoleInput && currentThread->fileTable->isOpened(fd)) {
     // Pasamos datos de una direccion de memoria de NachOS a una de linux
     // char* buffer = new char(size);
-    char buffer[size];
+    char buffer[size + 1];
+    memset(buffer, 0, size + 1);
     status = ReadMem(buffer_addr, size, buffer);
+    buffer[size] = '\0';
     fd = currentThread->fileTable->getUnixHandle(fd);
     if (status == EXIT_SUCCESS) {
       if (fd == ConsoleOutput) printf("%s", buffer);
