@@ -12,6 +12,7 @@ class ControlTable {
   ControlTable() {
     this->openObjects = new DataType[TABLE_SIZE];
     this->logicalMap = new BitMap(TABLE_SIZE);
+    memset(this->openObjects, 0, TABLE_SIZE);
     this->usage = 1;
   }
   // De-allocate
@@ -36,6 +37,7 @@ class ControlTable {
     if (this->logicalMap->Test(id)) {
       object = this->openObjects[id];
       this->logicalMap->Clear(id);
+      memset(&this->openObjects[id],0, sizeof(DataType));
     }
     return object;
   }
