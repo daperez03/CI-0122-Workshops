@@ -55,6 +55,7 @@ static void SwapHeader (NoffHeader *noffH) {
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
 AddrSpace::AddrSpace(OpenFile* executable) {
+  DEBUG('A', "AddrSpace: executable constructor.\n");
   NoffHeader noffH;
   unsigned int size;
 
@@ -112,9 +113,9 @@ AddrSpace::AddrSpace(OpenFile* executable) {
     }
   }
   byteCount = 0;
-  pageNum = noffH.initData.size - (PageSize - noffH.code.size % PageSize);
+  pageNum = noffH.initData.size;
+  if (dataMerge) pageNum -= (PageSize - noffH.code.size % PageSize);
   if(pageNum < 0) pageNum = 0;
-  int initDataSize = pageNum;
   pageNum = divRoundUp(pageNum, PageSize);
   if (dataMerge && noffH.initData.size) {
     int position = noffH.initData.inFileAddr;
@@ -134,8 +135,8 @@ AddrSpace::AddrSpace(OpenFile* executable) {
       int position = noffH.initData.inFileAddr + byteCount;
       byteCount += PageSize;
       int numBytes = PageSize;
-      if (byteCount > initDataSize) {
-        numBytes = initDataSize % PageSize;
+      if (byteCount > noffH.initData.size) {
+        numBytes = noffH.initData.size - (byteCount - PageSize);
       }
       executable->ReadAt(into, numBytes, position);
     }
@@ -143,7 +144,8 @@ AddrSpace::AddrSpace(OpenFile* executable) {
 }
 
 AddrSpace::AddrSpace(const AddrSpace& father) {
-  this->isSon = true;
+  DEBUG('A', "AddrSpace: Copy constructor.\n");
+  ++this->usage;
   this->numPages = father.numPages;
   this->pageTable = new TranslationEntry[numPages];
   int stackPagesInit = this->numPages - divRoundUp(UserStackSize, PageSize);
@@ -168,9 +170,15 @@ AddrSpace::AddrSpace(const AddrSpace& father) {
 // AddrSpace::~AddrSpace
 // 	Dealloate an address space.  Nothing for now!
 //----------------------------------------------------------------------
-
 AddrSpace::~AddrSpace() {
-  if (!this->isSon) delete pageTable;
+  DEBUG('A', "AddrSpace: default destructor.\n");
+  // Limpiar memoria
+  for(int i = 0; i < (int)this->numPages; ++i) {
+    int page = this->pageTable[i].physicalPage;
+    physicalPageMap->Clear(page);
+    bzero(machine->mainMemory + page * PageSize, PageSize);
+  }
+  delete pageTable;
 }
 
 //----------------------------------------------------------------------
@@ -184,6 +192,7 @@ AddrSpace::~AddrSpace() {
 //----------------------------------------------------------------------
 
 void AddrSpace::InitRegisters() {
+  DEBUG('A', "AddrSpace: InitRegisters.\n");
   int i;
 
   for (i = 0; i < NumTotalRegs; i++)
@@ -212,6 +221,7 @@ void AddrSpace::InitRegisters() {
 //----------------------------------------------------------------------
 
 void AddrSpace::SaveState() {
+  DEBUG('A', "AddrSpace: SaveState.\n");
 
 }
 
@@ -224,6 +234,7 @@ void AddrSpace::SaveState() {
 //----------------------------------------------------------------------
 
 void AddrSpace::RestoreState() {
+  DEBUG('A', "AddrSpace: RestoreState.\n");
   machine->pageTable = pageTable;
   machine->pageTableSize = numPages;
 }
