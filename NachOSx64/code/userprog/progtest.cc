@@ -13,31 +13,37 @@
 #include "console.h"
 #include "addrspace.h"
 #include "synch.h"
-#include "fileTable.h"
+#include "OSTable.h"
 
 //----------------------------------------------------------------------
 // StartProcess
 // Run a user program.  Open the executable, load it into
 // memory, and jump to it.
 //----------------------------------------------------------------------
-
 void StartProcess(const char *filename) {
   OpenFile *executable = fileSystem->Open(filename);
-  AddrSpace *space;
-  NachosOpenFilesTable* fileTable;
+
   if (executable == NULL) {
     printf("Unable to open file %s\n", filename);
     return;
   }
-  space = new AddrSpace(executable);
-  fileTable = new NachosOpenFilesTable();
-  currentThread->fileTable = fileTable;
-  currentThread->space = space;
+  currentThread->space = new AddrSpace(executable);
+  currentThread->fileTable = new ControlTable<int>();
+  currentThread->threadTable = new ControlTable<Thread*>();
+  currentThread->semTable = new ControlTable<Semaphore*>();
+  currentThread->lockTable = new ControlTable<Lock*>();
+  currentThread->condTable = new ControlTable<Condition*>();
+
+  // Asignar stdin, stdout & stderr
+  currentThread->fileTable->Open(0);  // stdin
+  currentThread->fileTable->Open(1);  // stdout
+  currentThread->fileTable->Open(2);  // stderr
+  currentThread->threadTable->Open(currentThread); // Add thread in table
 
   delete executable;			// close file
 
-  space->InitRegisters();		// set the initial register values
-  space->RestoreState();		// load page table register
+  currentThread->space->InitRegisters();		// set the initial register values
+  currentThread->space->RestoreState();		// load page table register
 
   machine->Run();			// jump to the user progam
   ASSERT(false);			// machine->Run never returns;
