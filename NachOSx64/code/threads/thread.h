@@ -39,12 +39,16 @@
 
 #include "copyright.h"
 #include "utility.h"
-#include "../userprog/fileTable.h"
+#include "../userprog/OSTable.h"
 
 #ifdef USER_PROGRAM
 #include "machine.h"
 #include "addrspace.h"
 #endif
+
+class Semaphore;
+class Lock;
+class Condition;
 
 // CPU register state to be saved on context switch.  
 // x86 processors needs 9 32-bit registers, whereas x64 has 8 extra registers
@@ -124,7 +128,12 @@ class Thread {
     void SaveUserState();		// save user-level register state
     void RestoreUserState();		// restore user-level register state
     AddrSpace* space;			// User code this thread is running.
-    NachosOpenFilesTable* fileTable;
+    ControlTable<int>* fileTable;
+    ControlTable<Thread*>* threadTable;
+    ControlTable<Semaphore*>* semTable;
+    ControlTable<Lock*>* lockTable;
+    ControlTable<Condition*>* condTable;
+    Semaphore* semaphore;
 #endif
 };
 

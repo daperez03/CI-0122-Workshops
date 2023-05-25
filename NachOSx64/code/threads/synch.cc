@@ -235,9 +235,9 @@ void Mutex::Unlock() {
 
 
 // Barrier class
-Barrier::Barrier(const char * debugName, int count) {
+Barrier::Barrier(const char * debugName, int size_p) {
     // this->name;
-    this->size = (size_t)count;
+    this->size = (size_t)size_p;
     this->queue = new List<Thread*>;
 }
 
@@ -251,8 +251,8 @@ void Barrier::Wait() {
         this->queue->Append(currentThread);
         currentThread->Sleep();
     } else {
-        for(int i = 0; i < size; ++i) {
-            IntStatus oldLevel = interrupt->SetLevel(IntOff);
+        for(size_t i = 0; i < size; ++i) {
+            oldLevel = interrupt->SetLevel(IntOff);
             Thread * thread = queue->Remove();
             if (thread != NULL)	   // make thread ready, consuming the V immediately
             scheduler->ReadyToRun(thread);

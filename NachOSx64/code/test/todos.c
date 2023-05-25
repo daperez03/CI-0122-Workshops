@@ -21,7 +21,7 @@ int main() {
     Salida[7] = '1';
     Salida[8] = 0;
     i = Exec( "../test/copy" );
-//    Write( "Espera por el copy ...\n", 23, 1 );
+    Write( "Espera por el copy ...\n", 23, 1 );
     a = Join( i );
 
     Fork( Verifica );

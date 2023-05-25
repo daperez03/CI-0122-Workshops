@@ -55,11 +55,23 @@ pingPong: pingPong.o start.o
 	$(LD) $(LDFLAGS) start.o pingPong.o -o pingPong.coff
 	../bin/coff2noff pingPong.coff pingPong
 
+create.o: create.c
+	$(CC) $(CFLAGS) -c create.c
+create: create.o start.o
+	$(LD) $(LDFLAGS) start.o create.o -o create.coff
+	../bin/coff2noff create.coff create
+
 RW.o: RW.c
 	$(CC) $(CFLAGS) -c RW.c
 RW: RW.o start.o
 	$(LD) $(LDFLAGS) start.o RW.o -o RW.coff
 	../bin/coff2noff RW.coff RW
+
+socket.o: socket.c
+	$(CC) $(CFLAGS) -c socket.c
+socket: socket.o start.o
+	$(LD) $(LDFLAGS) start.o socket.o -o socket.coff
+	../bin/coff2noff socket.coff socket
 
 halt.o: halt.c
 	$(CC) $(CFLAGS) -c halt.c
@@ -85,6 +97,14 @@ matmult: matmult.o start.o
 	$(LD) $(LDFLAGS) start.o matmult.o -o matmult.coff
 	../bin/coff2noff matmult.coff matmult
 
+todos.o: todos.c
+	$(CC) $(CFLAGS) -c todos.c
+todos: todos.o start.o
+	$(LD) $(LDFLAGS) start.o todos.o -o todos.coff
+	../bin/coff2noff todos.coff todos
+
+clean:
+	rm -f *.coff *.o
 
 # Estas reglas sirven para compilar programas simples, que consistan en un unico fuente
 # Las reglas anteriores para construir los ejecutables

@@ -35,6 +35,7 @@ SynchDisk   *synchDisk;
 #ifdef USER_PROGRAM	// requires either FILESYS or FILESYS_STUB
 Machine *machine;	// user program memory and registers
 BitMap* physicalPageMap; // Bit map de control de la memoria fisica
+Mutex* canAccessConsole;
 #endif
 
 #ifdef NETWORK
@@ -180,6 +181,7 @@ Initialize(int argc, char **argv)
 #ifdef USER_PROGRAM
     machine = new Machine(debugUserProg);	// this must come first
     physicalPageMap = new BitMap(NumPhysPages);
+    canAccessConsole = new Mutex("Control of Console");
 #endif
 
 #ifdef FILESYS

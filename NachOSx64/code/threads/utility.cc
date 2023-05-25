@@ -25,10 +25,8 @@ static const char *enableFlags = NULL; // controls which DEBUG messages are prin
 //		to be enabled.
 //----------------------------------------------------------------------
 
-void
-DebugInit(const char *flagList)
-{
-    enableFlags = flagList;
+void DebugInit(const char *flagList) {
+  enableFlags = flagList;
 }
 
 //----------------------------------------------------------------------
@@ -36,14 +34,12 @@ DebugInit(const char *flagList)
 //      Return true if DEBUG messages with "flag" are to be printed.
 //----------------------------------------------------------------------
 
-bool
-DebugIsEnabled(char flag)
-{
-    if (enableFlags != NULL)
-       return (strchr(enableFlags, flag) != 0) 
+bool DebugIsEnabled(char flag) {
+  if (enableFlags != NULL)
+    return (strchr(enableFlags, flag) != 0) 
 		|| (strchr(enableFlags, '+') != 0);
-    else
-      return false;
+  else
+    return false;
 }
 
 //----------------------------------------------------------------------
@@ -52,15 +48,13 @@ DebugIsEnabled(char flag)
 //	only with an extra argument on the front.
 //----------------------------------------------------------------------
 
-void 
-DEBUG(char flag, const char *format, ...)
-{
-    if (DebugIsEnabled(flag)) {
-	va_list ap;
-	// You will get an unused variable message here -- ignore it.
-	va_start(ap, format);
-	vfprintf(stdout, format, ap);
-	va_end(ap);
-	fflush(stdout);
-    }
+void DEBUG(char flag, const char *format, ...) {
+  if (DebugIsEnabled(flag)) {
+    va_list ap;
+    // You will get an unused variable message here -- ignore it.
+    va_start(ap, format);
+    vfprintf(stdout, format, ap);
+    va_end(ap);
+    fflush(stdout);
+  }
 }

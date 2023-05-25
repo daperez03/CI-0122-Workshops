@@ -5,8 +5,8 @@ char * buf;// = new int[6];
 	fd = Open("archivo.nuevo");
 	Write("prueba", 6, fd);
 	Close(fd);
-	Exec("../test/brillo");	
-	Exec("brillo1");
+	Exec("../test/addrspacetest");	
+	// Exec("brillo1");
 
 	//char* buf = new int[6];
 	fd = Open("archivo.nuevo");

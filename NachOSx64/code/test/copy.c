@@ -13,7 +13,7 @@ main()
     input  = Open( "nachos.1" );
     output = Open( "nachos.2" );
     while( (n = Read( buffer, 1024, input ) ) > 0 ) {
-        Write( buffer, n, output);
+        Write(buffer, n, output);
     }
     Close( input );
     Close( output );
