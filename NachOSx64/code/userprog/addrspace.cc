@@ -59,7 +59,7 @@ AddrSpace::AddrSpace(OpenFile* executable) {
   NoffHeader noffH;
   unsigned int size;
 
-  executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
+  stats->numDiskReads += executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
   if ((noffH.noffMagic != NOFFMAGIC) &&
     (WordToHost(noffH.noffMagic) == NOFFMAGIC))
     SwapHeader(&noffH);
@@ -109,7 +109,7 @@ AddrSpace::AddrSpace(OpenFile* executable) {
         numBytes = noffH.code.size % PageSize;
         dataMerge = true;
       }
-      executable->ReadAt(into, numBytes, position);
+      stats->numDiskReads += executable->ReadAt(into, numBytes, position);
     }
   }
   byteCount = 0;
@@ -123,7 +123,7 @@ AddrSpace::AddrSpace(OpenFile* executable) {
     if (numBytes > noffH.initData.size) numBytes = noffH.initData.size;
     char* into = &machine->mainMemory[this->pageTable[pageCount - 1].physicalPage
       * PageSize + (noffH.code.size % PageSize)];
-    executable->ReadAt(into, numBytes, position);
+    stats->numDiskReads += executable->ReadAt(into, numBytes, position);
     byteCount += numBytes;
   }
   if (pageNum > 0) {
@@ -138,7 +138,7 @@ AddrSpace::AddrSpace(OpenFile* executable) {
       if (byteCount > noffH.initData.size) {
         numBytes = noffH.initData.size - (byteCount - PageSize);
       }
-      executable->ReadAt(into, numBytes, position);
+      stats->numDiskReads += executable->ReadAt(into, numBytes, position);
     }
   }
 }
