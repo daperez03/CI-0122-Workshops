@@ -21,6 +21,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -117,36 +118,6 @@ void execProcess(void* file) {
   ASSERT(false);
 }
 
-// Rutina usada para eliminar los recursos de un hilo despues de un llamado a exit
-bool removeResources(Thread* thread) {
-  bool finish = true;
-  thread->threadTable->Close(thread->threadTable->getID(thread));
-  thread->threadTable->delThread();
-  thread->fileTable->delThread();
-  thread->semTable->delThread();
-  thread->lockTable->delThread();
-  thread->condTable->delThread();
-  if(thread->threadTable->getThreadCount() == 0)
-    delete thread->threadTable;
-  else finish = false;
-  if(thread->fileTable->getThreadCount() == 0)
-    delete thread->fileTable;
-  else finish = false;
-  if(thread->semTable->getThreadCount() == 0)
-    delete thread->semTable;
-  else finish = false;
-  if(thread->lockTable->getThreadCount() == 0)
-    delete thread->lockTable;
-  else finish = false;
-  if(thread->condTable->getThreadCount() == 0)
-    delete thread->condTable;
-  else finish = false;
-  delete thread->space;
-  thread->space = nullptr;
-  return finish;
-}
-
-
 //________________________________System calls_______________________________________
 /*
  *  System call interface: Halt()
@@ -168,15 +139,9 @@ void NachOS_Exit() {		// System call 1
   DEBUG('S', "System Call: NachOS_Exit.\n");
   int status = READ_PARAM(1); // Leemos el estado de ejecucion
   currentThread->Yield(); // Quitamos la CPU
-  bool finish = removeResources(currentThread); // Eliminamos los recursos del thread
-  if (currentThread->semaphore != NULL) {
-    while (currentThread->semaphore->getValue() != 1)
-     currentThread->semaphore->V();
-    delete currentThread->semaphore;
-  }
   // Finish the thread
   currentThread->Finish();
-  if (finish) NachOS_Halt();
+  if (errno) NachOS_Halt();
   RETURN(status);
 }
 

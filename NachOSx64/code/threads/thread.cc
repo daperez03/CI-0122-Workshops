@@ -14,6 +14,7 @@
 // All rights reserved.  See copyright.h for copyright notice and limitation 
 // of liability and disclaimer of warranty provisions.
 
+#include <errno.h>
 #include "copyright.h"
 #include "thread.h"
 #include "switch.h"
@@ -22,7 +23,8 @@
 
 // this is put at the top of the execution stack,
 // for detecting stack overflows
-const unsigned STACK_FENCEPOST = 0xdeadbeef;	
+const unsigned STACK_FENCEPOST = 0xdeadbeef;
+bool removeResources(Thread* thread);
 
 //----------------------------------------------------------------------
 // Thread::Thread
@@ -141,17 +143,50 @@ void Thread::CheckOverflow() {
 // 	NOTE: we disable interrupts, so that we don't get a time slice 
 //	between setting threadToBeDestroyed, and going to sleep.
 //----------------------------------------------------------------------
-
-//
 void Thread::Finish () {
   interrupt->SetLevel(IntOff);		
   ASSERT(this == currentThread);
+  errno = removeResources(currentThread); // Eliminamos los recursos del thread
+  if (currentThread->semaphore != NULL) {
+    while (currentThread->semaphore->getValue() != 1)
+     currentThread->semaphore->V();
+    delete currentThread->semaphore;
+  }
 
   DEBUG('t', "Finishing thread \"%s\"\n", getName());
   
   threadToBeDestroyed = currentThread;
   Sleep();					// invokes SWITCH
   // not reached
+}
+
+// Rutina usada para eliminar los recursos de un hilo despues de un llamado a exit
+bool removeResources(Thread* thread) {
+  bool finish = true;
+  thread->threadTable->Close(thread->threadTable->getID(thread));
+  thread->threadTable->delThread();
+  thread->fileTable->delThread();
+  thread->semTable->delThread();
+  thread->lockTable->delThread();
+  thread->condTable->delThread();
+  if(thread->threadTable->getThreadCount() == 0)
+    delete thread->threadTable;
+  else finish = false;
+  if(thread->fileTable->getThreadCount() == 0)
+    delete thread->fileTable;
+  else finish = false;
+  if(thread->semTable->getThreadCount() == 0)
+    delete thread->semTable;
+  else finish = false;
+  if(thread->lockTable->getThreadCount() == 0)
+    delete thread->lockTable;
+  else finish = false;
+  if(thread->condTable->getThreadCount() == 0)
+    delete thread->condTable;
+  else finish = false;
+  delete thread->space;
+  thread->space = nullptr;
+  return finish;
 }
 
 //----------------------------------------------------------------------
