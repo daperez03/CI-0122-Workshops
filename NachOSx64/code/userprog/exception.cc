@@ -277,8 +277,8 @@ void NachOS_Write() {		// System call 6
     status = ReadMem(buffer_addr, size, buffer);
     fd = currentThread->fileTable->getObject(fd);
     if (status == EXIT_SUCCESS) {
-      if (fd == ConsoleOutput) printf("%s", buffer);
-      else if (fd == ConsoleError) fprintf(stderr, "%s", buffer);
+      if (fd == ConsoleOutput) printf("%s\n", buffer);
+      else if (fd == ConsoleError) fprintf(stderr, "%d\n", buffer_addr);
       else status = write(fd, buffer, size);
     }
   }
