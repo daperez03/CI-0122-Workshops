@@ -61,7 +61,8 @@ int ReadMem(int addr, int bytes, char* dest) {
   for(int addrIterator = addr; addrIterator < addr + bytes; ++addrIterator) {
     int value = 0;
     error = !machine->ReadMem(addrIterator, 1, &value) || error;
-    dest[count++] = (char)value;
+    dest[count] = (char)value;
+    if(dest[count++] == '\0') break;
   }
   return (error ? -1 : 0);
 }
@@ -276,9 +277,9 @@ void NachOS_Read() {  // System call 7
     status = read(fd, buffer, size);
     if (status != EXIT_FAILURE) {
       // Pasamos los datos a la memoria de NachOS
-      status = WriteMem(buffer_addr, size, buffer);
       if (READ_PARAM(3) == ConsoleInput)
         stats->numConsoleCharsWritten += status;
+      status = WriteMem(buffer_addr, size, buffer) == -1 ? -1 : status;
     }
   }
   canAccessConsole->Unlock();
@@ -572,6 +573,7 @@ void NachOS_Connect() {		// System call 31
   int port = READ_PARAM(3);
   char host[BUFFER_SIZE];
   status = ReadMem(addrHost, BUFFER_SIZE, host);
+  if (strcmp(host, "localhost") == 0) strcpy(host, "127.0.0.1");
   if (status == EXIT_SUCCESS &&
     currentThread->fileTable->isOpened(socketFD)) {
       socketFD = currentThread->fileTable->getObject(socketFD);
