@@ -245,6 +245,7 @@ void NachOS_Write() {		// System call 6
     if (status == EXIT_SUCCESS) {
       if (fd == ConsoleOutput) {
         printf("%s", buffer);
+        fflush(stdout);
         stats->numConsoleCharsWritten += sizeof(buffer);
       } else if (fd == ConsoleError) fprintf(stderr, "%d\n", buffer_addr);
       else status = write(fd, buffer, size);
@@ -275,11 +276,11 @@ void NachOS_Read() {  // System call 7
     memset(buffer, 0, size);
     fd = currentThread->fileTable->getObject(fd);
     status = read(fd, buffer, size);
-    if (status != EXIT_FAILURE) {
+    if (status != -1) {
       // Pasamos los datos a la memoria de NachOS
       if (READ_PARAM(3) == ConsoleInput)
         stats->numConsoleCharsWritten += status;
-      status = WriteMem(buffer_addr, size, buffer) == -1 ? -1 : status;
+      status = WriteMem(buffer_addr, status, buffer) == -1 ? -1 : status;
     }
   }
   canAccessConsole->Unlock();

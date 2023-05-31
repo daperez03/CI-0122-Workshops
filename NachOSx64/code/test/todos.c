@@ -20,7 +20,7 @@ int main() {
     Salida[6] = '.';
     Salida[7] = '1';
     Salida[8] = 0;
-    i = Exec( "../test/copy" );
+    i = Exec( "../test/shell" );
     Write( "Espera por el copy ...\n", 23, 1 );
     a = Join( i );
 
