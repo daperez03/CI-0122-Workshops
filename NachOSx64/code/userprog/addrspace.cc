@@ -173,7 +173,17 @@ AddrSpace::AddrSpace(const AddrSpace& father) {
 AddrSpace::~AddrSpace() {
   DEBUG('A', "AddrSpace: default destructor.\n");
   // Limpiar memoria
-  for(int i = 0; i < (int)this->numPages; ++i) {
+  int globalPage = this->numPages - divRoundUp(UserStackSize, PageSize);
+  if (--this->usage == 0) {
+    // Elimina memoria de la seccion de codigo y datos 
+    for (int i = 0; i < globalPage; ++i) {
+      int page = this->pageTable[i].physicalPage;
+      physicalPageMap->Clear(page);
+      bzero(machine->mainMemory + page * PageSize, PageSize);
+    }
+  }
+  // Elimina memoria del stack
+  for (int i = globalPage; i < (int)this->numPages; ++i) {
     int page = this->pageTable[i].physicalPage;
     physicalPageMap->Clear(page);
     bzero(machine->mainMemory + page * PageSize, PageSize);

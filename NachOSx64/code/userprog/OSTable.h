@@ -5,17 +5,20 @@
 
 #define TABLE_SIZE 100
 
+/// @brief Tabla de Control
+/// @tparam DataType Tipo de dato de la tabla
 template <typename DataType>
 class ControlTable {
  public:
-  // Initialize
+  /// @brief Constructor por default de una tabla de control
   ControlTable() {
     this->openObjects = new DataType[TABLE_SIZE];
     this->logicalMap = new BitMap(TABLE_SIZE);
     memset(this->openObjects, 0, TABLE_SIZE);
     this->usage = 1;
   }
-  // De-allocate
+
+  /// @brief Destructor por defualt de una tabla de control
   ~ControlTable() {
     if (this->usage == 1) {
       // for (int i = 0; i < TABLE_SIZE; ++i)
@@ -24,13 +27,19 @@ class ControlTable {
       delete this->openObjects;
     }
   }
-  // Register the file handle
+
+  /// @brief Agrega un nuevo elemento a la tabla de control
+  /// @param object Elemento nuevo
+  /// @return ID relacionado con el nuevo elemento
   int Open(DataType object) {
     int id = this->logicalMap->Find();
     this->openObjects[id] = object;
     return id;
   }
-  // Unregister the file handle
+
+  /// @brief Borra un elemento de la tabla de control
+  /// @param id ID del elemento que se desea borrar
+  /// @return elemento que se saco de la tabla
   DataType Close(int id) {
     ASSERT(id < TABLE_SIZE && id >= 0);
     DataType object;
@@ -41,12 +50,18 @@ class ControlTable {
     }
     return object;
   }
-  /// Return true if the id is in the table
+
+  /// @brief Indica si un id exste en la tabla
+  /// @param id ID del objeto que se quiere verificar
+  /// @return True si el elemento se encuentra, false si no se encontro el elemento
   bool isOpened(int id) {
     ASSERT(id < TABLE_SIZE && id >= 0);
     return this->logicalMap->Test(id);
   }
-  /// Return object of id
+
+  /// @brief Retorna el objeto relacionado con un ID
+  /// @param id ID relacionado con el objeto
+  /// @return Objeto hallado
   DataType getObject(int id) {
     ASSERT(id < TABLE_SIZE && id >= 0);
     DataType object;
@@ -55,7 +70,10 @@ class ControlTable {
     }
     return object;
   }
-  /// Return id of object
+
+  /// @brief Retorna el ID relacionado a un objeto
+  /// @param object Objeto del cual deseamos obtener un ID
+  /// @return ID del objeto, -1 en caso de error
   int getID(DataType object) {
     int id = -1;
     for (int i = 0; i < TABLE_SIZE; ++i) {
@@ -66,23 +84,30 @@ class ControlTable {
     }
     return id;
   }
-  // If a user thread is using this table, add it
+
+  /// @brief Aumenta la variable de usuarios, que indica cuantos procesos estan utilizando la tabla
   void addThread() {
     ++this->usage;
   }
-  // If a user thread is using this table, delete it
+
+  /// @brief Decrementa la variable de usuarios, que indica cuantos procesos estan utilizando la tabla
   void delThread() {
     --this->usage;
   }
+
+  /// @brief Retorna el numero de procesos utilizando la tabla de control
+  /// @return Numero de proceos utilizando la tabal de control
   int getThreadCount() {
     return usage;
   }
  private:
-  // A vector with user opened files
+  /// @brief Vector con los objetos 
   DataType * openObjects;
-  // A bitmap to control our vector
+
+  /// @brief BitMap para controlar los id y espacios disponibles dentro de la tabla de control
   BitMap * logicalMap;
-  // How many threads are using this table
+  
+  /// @brief Numero de procesos utilizando la tabla de control
   int usage;
 };
 

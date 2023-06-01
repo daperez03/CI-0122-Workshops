@@ -38,22 +38,26 @@
 #include "OSTable.h"
 
 //____________________________Macros______________________________________________
-/// Utilizado para obtener los valores de parametro
+/// @brief Lee los valores de parametro en los registros
 #define READ_PARAM(t) machine->ReadRegister(t + 3)
-// Utilizado para retornar un valor despues de un system call
+/// @brief Retornar un valor despues de un system call
 #define RETURN(t) machine->WriteRegister(2, t)
-// Define el tamaño default de los buffer
+/// @brief Define el tamaño default de los buffer
 #define BUFFER_SIZE 1000
 
 //___________________________Common Functions______________________________________
-/// Rutina para una vez llamada y ejecutada una exepcion pasar a la siguiente.
+/// @brief Mueve los registros a la siguiente instruccion
 void getNextInstruction() {
   machine->WriteRegister(PrevPCReg, machine->ReadRegister(PCReg));
   machine->WriteRegister(PCReg, machine->ReadRegister(NextPCReg));
   machine->WriteRegister(NextPCReg, machine->ReadRegister(NextPCReg) + 4);
 }
 
-/// Rutina para leer un conjunto n de bytes de la memoria de nachos
+/// @brief Leer un conjunto n de bytes de la memoria de NachOS
+/// @param addr Direccion logica de NachOS
+/// @param bytes Numero de bytes a leer
+/// @param dest Buffer de destino de los datos
+/// @return Estado de la funcion ejecutada: 0 = Exit Success; -1 = Exit Failer
 int ReadMem(int addr, int bytes, char* dest) {
   memset(dest, 0, bytes);
   bool error = false;
@@ -62,12 +66,34 @@ int ReadMem(int addr, int bytes, char* dest) {
     int value = 0;
     error = !machine->ReadMem(addrIterator, 1, &value) || error;
     dest[count] = (char)value;
-    if(dest[count++] == '\0') break;
+    if (dest[count++] == 0) break;
   }
   return (error ? -1 : 0);
 }
 
-/// Rutina para escribir un conjunto n de bytes sobre memoria de nachos
+/// @brief Leer un conjunto de caracteres de la memoria de NachOS
+/// @param addr Direccion logica de NachOS
+/// @param bytes Numero de bytes del buffer
+/// @param dest Buffer de destino de los datos
+/// @return Estado de la funcion ejecutada: 0 = Exit Success; -1 = Exit Failer
+int ReadMemSTR(int addr, int bytes, char* dest) {
+  memset(dest, 0, bytes);
+  bool error = false;
+  int count = 0;
+  for(int addrIterator = addr; addrIterator < addr + bytes; ++addrIterator) {
+    int value = 0;
+    error = !machine->ReadMem(addrIterator, 1, &value) || error;
+    dest[count] = (char)value;
+    if (dest[count++] == 0) break;
+  }
+  return (error ? -1 : 0);
+}
+
+/// @brief Escribir un conjunto de bytes sobre memoria de NachOS
+/// @param addr Direccion logica de NachOS
+/// @param bytes Numeros de bytes a escribir
+/// @param src Buffer con los datos
+/// @return Estado de la funcion ejecutada: 0 = Exit Success; -1 = Exit Failer
 int WriteMem(int addr, int bytes, char* src) {
   bool error = false;
   int count = 0;
@@ -78,8 +104,9 @@ int WriteMem(int addr, int bytes, char* src) {
   return (error ? -1 : 0);
 }
 
-/// Rutina para compartir los recursos entre dos thread.
-/// Usado para sytem call de fork y exec
+/// @brief Comparte recursos entre threads.
+/// @param src Thread con los recursos
+/// @param dst Thread destino
 void ShareResources(Thread* src, Thread* dst) {
   dst->fileTable = src->fileTable;
   dst->fileTable->addThread();
@@ -93,9 +120,8 @@ void ShareResources(Thread* src, Thread* dst) {
   dst->condTable->addThread();
 }
 
-// Pass the user routine address as a parameter for this function
-// This function is similar to "StartProcess" in "progtest.cc" file under "userprog"
-// Requires a correct AddrSpace setup to work well
+/// @brief Mueve el contador de instrucciones sobre una funcion especifica
+/// @param addr Funcion sobre la que se quiere mover el contador
 void NachOSForkThread(void * addr) { // for 64 bits version
   // Tomamos el space del hilo actual
   AddrSpace* space = currentThread->space;
@@ -110,7 +136,8 @@ void NachOSForkThread(void * addr) { // for 64 bits version
   ASSERT(false);
 }
 
-/// Rutina para cargar un programa despues de un llamado a exec
+/// @brief Carga un programa sobre un thread
+/// @param file nombre del programa
 void execProcess(void* file) {
   currentThread->space = new AddrSpace((OpenFile*)file);
   currentThread->space->InitRegisters();
@@ -120,22 +147,15 @@ void execProcess(void* file) {
 }
 
 //________________________________System calls_______________________________________
-/*
- *  System call interface: Halt()
- *  Solamente llama a Halt de Interrupt
- */
+/// @brief System call interface: Halt()
 void NachOS_Halt() {		// System call 0
   DEBUG('S', "System Call: NachOS_Halt.\n");
   DEBUG('a', "Shutdown, initiated by user program.\n");
   interrupt->Halt();
 }
 
-
-/*
- *  System call interface: void Exit( int )
- *  Revisa los recursos abierto y elimina los que no son utilizados por otro hilo
- * incluyendo su Addrspace
- */
+/// @brief System call interface: void Exit( int )
+/// @details Finaliza un proceso, revisa recursos abierto y los elimina
 void NachOS_Exit() {		// System call 1
   DEBUG('S', "System Call: NachOS_Exit.\n");
   int status = READ_PARAM(1); // Leemos el estado de ejecucion
@@ -146,17 +166,16 @@ void NachOS_Exit() {		// System call 1
   RETURN(status);
 }
 
-
-/*
- *  System call interface: SpaceId Exec( char * )
- *  Inicia la ejecucion de un programa pasado por parametro
- */
+/// @brief System call interface: SpaceId Exec( char * )
+/// @details Inicia la ejecucion de un programa
+/// @param programName Nombre del programa
+/// @return ID del nuevo hilo creado o -1 en caso de error
 void NachOS_Exec() {		// System call 2
   DEBUG('S', "System Call: NachOS_Exec.\n");
   int status = -1;
-  char prgramName[BUFFER_SIZE];
-  status = ReadMem(READ_PARAM(1), BUFFER_SIZE, prgramName);
-  OpenFile* executable = fileSystem->Open(prgramName);
+  char programName[BUFFER_SIZE];
+  status = ReadMemSTR(READ_PARAM(1), BUFFER_SIZE, programName);
+  OpenFile* executable = fileSystem->Open(programName);
   if (status != -1 && executable != nullptr) {
     Thread* newThread = new Thread ("New process");
     status = currentThread->threadTable->Open(newThread);
@@ -166,11 +185,10 @@ void NachOS_Exec() {		// System call 2
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int Join( SpaceId )
- *  Revisa si un hilo continua en ejecucion y espera el final de esta
- */
+/// @brief System call interface: int Join( SpaceId )
+/// @details Espera que un hilo finalice su ejecucion
+/// @param thread_id Hilo por el que se desea esperar 
+/// @return Estado de la funcion ejecutada: 0 = Exit Success; -1 = Exit Failer
 void NachOS_Join() {		// System call 3
   DEBUG('S', "System Call: NachOS_Join.\n");
   int status = -1;
@@ -189,12 +207,17 @@ void NachOS_Join() {		// System call 3
  *  System call interface: void Create( char * )
  *  Crea un nuevo documento
  */
+
+/// @brief System call interface: void Create( char * )
+/// @details Crea un nuevo documento de texto
+/// @param buffer_addr Nombre del ejecutable
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_Create() {		// System call 4
   DEBUG('S', "System Call: NachOS_Create.\n");
   int status = -1;
   int buffer_addr = READ_PARAM(1);
   char buffer[BUFFER_SIZE];
-  status = ReadMem(buffer_addr, BUFFER_SIZE, buffer);
+  status = ReadMemSTR(buffer_addr, BUFFER_SIZE, buffer);
   if(status == EXIT_SUCCESS) {
     OpenFileId fd = creat(buffer, S_IRWXU);
     status = fd;
@@ -202,17 +225,17 @@ void NachOS_Create() {		// System call 4
   RETURN(status);
 }
 
-/*
- *  System call interface: OpenFileId Open( char * )
- *  Abre un documento indicado por parametros
- */
+/// @brief System call interface: OpenFileId Open( char * )
+/// @details Abre un documento de texto
+/// @param buffer_addr Nombre del documento
+/// @return File descriptor o -1 en caso de error
 void NachOS_Open() {		// System call 5
   DEBUG('S', "System Call: NachOS_Open.\n");
   int status = -1;
   int buffer_addr = READ_PARAM(1);
   char buffer[BUFFER_SIZE];
   memset(buffer, 0, BUFFER_SIZE);
-  status = ReadMem(buffer_addr, BUFFER_SIZE, buffer);
+  status = ReadMemSTR(buffer_addr, BUFFER_SIZE, buffer);
   if(status == EXIT_SUCCESS) {
     OpenFileId fd = open(buffer, O_RDWR);
     if (fd != -1)
@@ -222,10 +245,12 @@ void NachOS_Open() {		// System call 5
   RETURN(status);
 }
 
-/*
- *  System call interface: OpenFileId Write( char *, int, OpenFileId )
- *  Escribe sobre un documento con el fd
- */
+/// @brief System call interface: OpenFileId Write( char *, int, OpenFileId )
+/// @details Permite escribe sobre un documento
+/// @param buffer_addr Bytes a escribir
+/// @param size Tamaño del buffer
+/// @param fd File descriptor
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_Write() {		// System call 6
   DEBUG('S', "System Call: NachOS_Write.\n");
   int status = -1;
@@ -255,10 +280,12 @@ void NachOS_Write() {		// System call 6
   RETURN(status);
 }
 
-/*
- *  System call interface: OpenFileId Read( char *, int, OpenFileId )
- *  Lee un documento con el fd
- */
+/// @brief System call interface: OpenFileId Read( char *, int, OpenFileId )
+/// @details Lee un documento
+/// @param buffer_addr Buffer destino de lo que se leera
+/// @param size Tamaño del buffer
+/// @param fd File descriptor
+/// @return Numero de bytes leidos, 0 en caso de EOF, -1 en caso de error
 void NachOS_Read() {  // System call 7
   DEBUG('S', "System Call: NachOS_Read.\n");
   int status = -1;
@@ -287,11 +314,10 @@ void NachOS_Read() {  // System call 7
   RETURN(status);
 }
 
-
-/*
- *  System call interface: void Close( OpenFileId )
- *  Cierra un documento con el fd
- */
+/// @brief System call interface: void Close( OpenFileId )
+/// @details Cierra un documento
+/// @param fd File descriptor
+/// @return 0 en caso de exito, -1 en caso de erro
 void NachOS_Close() {		// System call 8
   DEBUG('S', "System Call: NachOS_Close.\n");
   int status = -1;
@@ -304,11 +330,10 @@ void NachOS_Close() {		// System call 8
   RETURN(status);
 }
 
-
-/*
- *  System call interface: void Fork( void (*func)() )
- *  Crea un nuevo hilo sobre una subrutina
- */
+/// @brief System call interface: int Fork( void (*func)() )
+/// @details Crea un nuevo thread sobre una subrutina
+/// @param funccion Subrutina en la que se ejecutara el nuevo thread
+/// @return ID del nuevo hilo o -1 en caso de error
 void NachOS_Fork() {		// System call 9
   DEBUG('S', "System Call: NachOS_Fork.\n");
   DEBUG( 'u', "Entering Fork System call\n" );
@@ -320,21 +345,17 @@ void NachOS_Fork() {		// System call 9
   DEBUG( 'u', "Exiting Fork System call\n" );
 }
 
-
-/*
- *  System call interface: void Yield()
- *  Entrega la CPU
- */
+/// @brief System call interface: void Yield()
+/// @details Cede la CPU a otro proceso
 void NachOS_Yield() {		// System call 10
   DEBUG('S', "System Call: NachOS_Yield.\n");
   currentThread->Yield();
 }
 
-
-/*
- *  System call interface: Sem_t SemCreate( int )
- *  Crea un semafor
- */
+/// @brief System call interface: Sem_t SemCreate( int )
+/// @details Crea un semafor
+/// @param sem_init Numero en el cual el semaforo iniciara
+/// @return ID del semafor o -1 en caso de error
 void NachOS_SemCreate() {		// System call 11
   DEBUG('S', "System Call: NachOS_SemCreate.\n");
   Semaphore* sem = new Semaphore("Semaphore", READ_PARAM(1));
@@ -342,11 +363,10 @@ void NachOS_SemCreate() {		// System call 11
   RETURN(sem_id);
 }
 
-
-/*
- *  System call interface: int SemDestroy( Sem_t )
- *  Destruye un semaforo mediante el id
- */
+/// @brief System call interface: int SemDestroy( Sem_t )
+/// @details Crea un semaforo
+/// @param sem_id ID del semaforo
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_SemDestroy() {		// System call 12
   DEBUG('S', "System Call: NachOS_SemDestroy.\n");
   int status = -1;
@@ -359,11 +379,10 @@ void NachOS_SemDestroy() {		// System call 12
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int SemSignal( Sem_t )
- *  Genera un signal a un semaforo mediante su id
- */
+/// @brief System call interface: int SemSignal( Sem_t )
+/// @details Hace un signal al semaforo
+/// @param sem_id ID del semaforo
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_SemSignal() {		// System call 13
   DEBUG('S', "System Call: NachOS_SemSignal.\n");
   int status = -1;
@@ -375,11 +394,10 @@ void NachOS_SemSignal() {		// System call 13
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int SemWait( Sem_t )
- *  Espera por un semafor
- */
+/// @brief System call interface: int SemWait( Sem_t )
+/// @details Hace un wait sobre el semaforo
+/// @param sem_id ID del semaforo
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_SemWait() {		// System call 14
   DEBUG('S', "System Call: NachOS_SemWait.\n");
   int status = -1;
@@ -396,6 +414,10 @@ void NachOS_SemWait() {		// System call 14
  *  System call interface: Lock_t LockCreate()
  *  Crea un Lock
  */
+
+/// @brief System call interface: Lock_t LockCreate()
+/// @details Crea un lock
+/// @return ID del lock, -1 en caso de error
 void NachOS_LockCreate() {		// System call 15
   DEBUG('S', "System Call: NachOS_LockCreate.\n");
   Lock* lock = new Lock("Lock");
@@ -403,11 +425,10 @@ void NachOS_LockCreate() {		// System call 15
   RETURN(lock_id);
 }
 
-
-/*
- *  System call interface: int LockDestroy( Lock_t )
- *  Destruye un Lock
- */
+/// @brief System call interface: int LockDestroy( Lock_t )
+/// @details Destruye un lock
+/// @param lock_id ID del lock
+/// @return 0 en caso de exito, -1 en caso de erro 
 void NachOS_LockDestroy() {		// System call 16
   DEBUG('S', "System Call: NachOS_LockDestroy.\n");
   int status = -1;
@@ -420,11 +441,10 @@ void NachOS_LockDestroy() {		// System call 16
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int LockAcquire( Lock_t )
- *  Produce un acquire sobre un Lock
- */
+/// @brief System call interface: int LockAcquire( Lock_t )
+/// @details Produce un acquire sobre un Lock
+/// @param lock_id ID del lock
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_LockAcquire() {		// System call 17
   DEBUG('S', "System Call: NachOS_LockAcquire.\n");
   int status = -1;
@@ -436,11 +456,10 @@ void NachOS_LockAcquire() {		// System call 17
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int LockRelease( Lock_t )
- *  Produce un release sobre un Lock
- */
+/// @brief System call interface: int LockRelease( Lock_t )
+/// @details Produce un release sobre un lock
+/// @param lock_id ID del lock
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_LockRelease() {		// System call 18
   DEBUG('S', "System Call: NachOS_LockRelease.\n");
   int status = -1;
@@ -452,11 +471,9 @@ void NachOS_LockRelease() {		// System call 18
   RETURN(status);
 }
 
-
-/*
- *  System call interface: Cond_t LockCreate( int )
- *  Crea una variable de condicion
- */
+/// @brief System call interface: Cond_t LockCreate( )
+/// @details Crea una variable de condicion
+/// @return ID de la variable de condicion
 void NachOS_CondCreate() {		// System call 19
   DEBUG('S', "System Call: NachOS_CondCreate.\n");
   Condition* cond = new Condition("Condition");
@@ -464,11 +481,10 @@ void NachOS_CondCreate() {		// System call 19
   RETURN(cond_id);
 }
 
-
-/*
- *  System call interface: int CondDestroy( Cond_t )
- *  Destruye una variable de condicion
- */
+/// @brief System call interface: int CondDestroy( Cond_t )
+/// @details Destruye una variable de condicion
+/// @param cond_id ID de la variable de condicion
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_CondDestroy() {		// System call 20
   DEBUG('S', "System Call: NachOS_CondDestroy.\n");
   int status = -1;
@@ -481,11 +497,11 @@ void NachOS_CondDestroy() {		// System call 20
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int CondSignal(Cond_t, Lock_t)
- *  Aplica un signal sobre una variable de condicion
- */
+/// @brief System call interface: int CondSignal(Cond_t, Lock_t)
+/// @details Aplica un signal sobre una variable de condicion
+/// @param cond_id ID de la variable de condicion
+/// @param lock_id ID del lock
+/// @return 0 en caso de exito, -1 en caso de error 
 void NachOS_CondSignal() {		// System call 21
   DEBUG('S', "System Call: NachOS_CondSignal.\n");
   int status = -1;
@@ -500,11 +516,11 @@ void NachOS_CondSignal() {		// System call 21
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int CondWait(Cond_t, Lock_t)
- *  Aplica un wait sobre una variable de condicion
- */
+/// @brief System call interface: int CondWait(Cond_t, Lock_t)
+/// @details Aplica un wait sobre una variable de condicion
+/// @param cond_id ID de la variable de condicion
+/// @param lock_id ID del lock
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_CondWait() {		// System call 22
   DEBUG('S', "System Call: NachOS_CondWait.\n");
   int status = -1;
@@ -519,11 +535,11 @@ void NachOS_CondWait() {		// System call 22
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int CondBroadcast(Cond_t, Lock_t)
- *  Aplica un brodcast sobre una variable de condicion
- */
+/// @brief System call interface: int CondBroadcast(Cond_t, Lock_t)
+/// @details Aplica un brodcast sobre una variable de condicion
+/// @param cond_id ID de la variable de condicion
+/// @param lock_id ID del lock
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_CondBroadcast() {		// System call 23
   DEBUG('S', "System Call: NachOS_CondBrodcast.\n");
   int status = -1;
@@ -538,16 +554,15 @@ void NachOS_CondBroadcast() {		// System call 23
   RETURN(status);
 }
 
-
-/*
- *  System call interface: Socket_t Socket( int, int )
- *  Crea un socket
- */
+/// @brief System call interface: Socket_t Socket( int, int )
+/// @param family Familia a la que pertenece el socket
+/// @param type Tipo de socket
+/// @return ID del socket, -1 en caso de error
 void NachOS_Socket() {			// System call 30
   DEBUG('S', "System Call: NachOS_Socket.\n");
   int status = -1;
   int family = READ_PARAM(1); // Get family
-  int type = READ_PARAM(1); // Get socket type
+  int type = READ_PARAM(2); // Get socket type
   bool canCreateSocket = (family == AF_INET_NachOS ||
     family == AF_INET6_NachOS) && (type == SOCK_DGRAM_NachOS
     || type == SOCK_STREAM_NachOS); // if all are ok return true
@@ -561,11 +576,12 @@ void NachOS_Socket() {			// System call 30
   RETURN(status); // return socket id or error
 }
 
-
-/*
- *  System call interface: Socket_t Connect( char *, int )
- *  Realiza un conect a un host
- */
+/// @brief System call interface: Socket_t Connect( char *, int )
+/// @details Realiza un conect a un servidor
+/// @param socketFD ID del socket
+/// @param addrHost Direccion del servidor
+/// @param port Puerto
+/// @return 0 en caso de exito, -1 en caso de error 
 void NachOS_Connect() {		// System call 31
   DEBUG('S', "System Call: NachOS_Connect.\n");
   int status = -1;
@@ -573,7 +589,7 @@ void NachOS_Connect() {		// System call 31
   int addrHost = READ_PARAM(2);
   int port = READ_PARAM(3);
   char host[BUFFER_SIZE];
-  status = ReadMem(addrHost, BUFFER_SIZE, host);
+  status = ReadMemSTR(addrHost, BUFFER_SIZE, host);
   if (strcmp(host, "localhost") == 0) strcpy(host, "127.0.0.1");
   if (status == EXIT_SUCCESS &&
     currentThread->fileTable->isOpened(socketFD)) {
@@ -604,11 +620,10 @@ void NachOS_Connect() {		// System call 31
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int Bind( Socket_t, int )
- *  Realiza un bind a un puerto
- */
+/// @brief System call interface: int Bind( Socket_t, int )
+/// @param socketFD ID del socket
+/// @param port Puerto
+/// @return 0 en caso de exito, 0 en caso de error
 void NachOS_Bind() {		// System call 32
   DEBUG('S', "System Call: NachOS_Bind.\n");
   int status = -1;
@@ -640,11 +655,11 @@ void NachOS_Bind() {		// System call 32
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int Listen( Socket_t, int )
- *  Escucha en un puerto
- */
+/// @brief System call interface: int Listen( Socket_t, int )
+/// @details Escucha conexiones en un puerto
+/// @param socketFD ID del socket
+/// @param numConnection  Numero de conexiones permitidas
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_Listen() {		// System call 33
   DEBUG('S', "System Call: NachOS_Listen.\n");
   int status = -1;
@@ -657,11 +672,10 @@ void NachOS_Listen() {		// System call 33
   RETURN(status);
 }
 
-
-/*
- *  System call interface: int Accept( Socket_t )
- *  Acepta una conexion
- */
+/// @brief System call interface: int Accept( Socket_t )
+/// @details Acepta una conexion
+/// @param socketFD ID del socket
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_Accept() {		// System call 34
   DEBUG('S', "System Call: NachOS_Accept.\n");
   int  status = -1;
@@ -695,6 +709,12 @@ void NachOS_Accept() {		// System call 34
  *  System call interface: int Shutdown( Socket_t, int )
  *  Realiza un Shutdown sobre un socket
  */
+
+/// @brief System call interface: int Shutdown( Socket_t, int )
+/// @details Realiza un Shutdown sobre un socket
+/// @param socket ID del socket
+/// @param how Tipo de shutdown
+/// @return 0 en caso de exito, -1 en caso de error
 void NachOS_Shutdown() {	// System call 25
   DEBUG('S', "System Call: NachOS_Shutdown.\n");
   int status = -1;
