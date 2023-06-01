@@ -1,0 +1,24 @@
+Hola 1
+Hola 2
+Hola 1
+Hola 2
+Hola 1
+Hola 2
+Hola 1
+Hola 2
+Hola 1
+Hola 2
+Fin de
+Main  
+€€Fin de
+No threads ready or runnable, and no pending interrupts.
+Assuming the program completed.
+Machine halting!
+
+Ticks: total 819, idle 0, system 450, user 369
+Disk I/O: reads 952, writes 0
+Console I/O: reads 0, writes 114
+Paging: faults 0
+Network I/O: packets received 0, sent 0
+
+Cleaning up...

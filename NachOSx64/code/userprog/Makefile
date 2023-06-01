@@ -27,8 +27,16 @@ include ../Makefile.dep
 #-----------------------------------------------------------------
 # DO NOT DELETE THIS LINE -- make depend uses it
 # DEPENDENCIES MUST END AT END OF FILE
+.PHONY: all test clean
+
 clean:
-	rm -f *.o nachos
+	rm -f *.o nachos ../test/*.cmp
+
+test:
+	./nachos -x ../test/addrspacetest > ./test/addrspacetest.cmp
+	icdiff --no-headers ./test/addrspacetest ./test/addrspacetest.cmp
+	./nachos -x ../test/pingPong > ./test/pinPong.cmp
+	icdiff --no-headers ./test/pingPong ./test/pinPong.cmp
 
 main.o: ../threads/main.cc /usr/include/stdc-predef.h \
  ../threads/copyright.h ../threads/utility.h ../machine/sysdep.h \
