@@ -13,6 +13,7 @@
 ../machine/timer.cc
 ../threads/preemptive.cc
 ../userprog/addrspace.cc
+../userprog/addrspaceVM.cc
 ../userprog/bitmap.cc
 ../userprog/exception.cc
 ../userprog/progtest.cc
