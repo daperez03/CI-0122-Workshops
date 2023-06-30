@@ -24,14 +24,14 @@ class AddrSpace {
   public:
     /// @brief Crea un nuevo address space para un ejecutable
     /// @param executable Archvio ejecutable de Mips
-    AddrSpace(OpenFile *executable);	// Create an address space,
+    AddrSpace(OpenFile*);	// Create an address space,
       // initializing it with the program
       // stored in the file "executable"
     
     /// @brief Constructor por copia de address space
     /// @details Copia el segmento de codigo y datos del original y agrega un nuvo stack
     /// @param father Address space a copiar
-    AddrSpace(const AddrSpace& father);
+    AddrSpace(const AddrSpace&);
 
     /// @brief Destructor por default de address space
     ~AddrSpace();  // De-allocate an address space
@@ -46,7 +46,9 @@ class AddrSpace {
     void SaveState();  // Save/restore address space-specific
 
     /// @brief Informacion sobre el context switch
-    void RestoreState();  // info on a context switch 
+    void RestoreState();  // info on a context switch
+
+    void PageFaultException(); 
 
   private:
     /// @brief Tabla de paginas
@@ -57,6 +59,7 @@ class AddrSpace {
       // address space
     /// @brief numero de usuarios del address space
     int usage = 1;
+    OpenFile* executable;
 };
 
 #endif // ADDRSPACE_H

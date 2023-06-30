@@ -1,3 +1,4 @@
+#ifdef VM1 
 // addrspace.cc 
 //	Routines to manage address spaces (executing user programs).
 //
@@ -54,10 +55,12 @@ static void SwapHeader (NoffHeader *noffH) {
 //
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
-AddrSpace::AddrSpace(OpenFile* executable) {
+
+AddrSpace::AddrSpace(OpenFile* exec) {
   DEBUG('A', "AddrSpace: executable constructor.\n");
   NoffHeader noffH;
   unsigned int size;
+  this->executable = exec;
 
   stats->numDiskReads += executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
   if ((noffH.noffMagic != NOFFMAGIC) &&
@@ -166,6 +169,7 @@ AddrSpace::AddrSpace(const AddrSpace& father) {
   }
 }
 
+
 //----------------------------------------------------------------------
 // AddrSpace::~AddrSpace
 // 	Dealloate an address space.  Nothing for now!
@@ -248,3 +252,7 @@ void AddrSpace::RestoreState() {
   machine->pageTable = pageTable;
   machine->pageTableSize = numPages;
 }
+
+void AddrSpace::PageFaultException() {}
+
+#endif

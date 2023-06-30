@@ -854,6 +854,8 @@ void ExceptionHandler(ExceptionType which) {
       getNextInstruction();
       break;
     case PageFaultException:
+      // TODO(me): make exception for the PageFault
+      currentThread->space->PageFaultException();
       break;
     case ReadOnlyException:
       printf( "Read Only exception (%d)\n", which );

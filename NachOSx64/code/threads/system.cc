@@ -12,13 +12,13 @@
 // This defines *all* of the global data structures used by Nachos.
 // These are all initialized and de-allocated by this file.
 
-Thread *currentThread;			// the thread we are running now
-Thread *threadToBeDestroyed;  		// the thread that just finished
-Scheduler *scheduler;			// the ready list
-Interrupt *interrupt;			// interrupt status
-Statistics *stats;			// performance metrics
-Timer *timer;				// the hardware timer device,
-					// for invoking context switches
+Thread* currentThread;			// the thread we are running now
+Thread* threadToBeDestroyed;  		// the thread that just finished
+Scheduler* scheduler;			// the ready list
+Interrupt* interrupt;			// interrupt status
+Statistics* stats;			// performance metrics
+Timer* timer;				// the hardware timer device,
+// for invoking context switches
 					
 // 2007, Jose Miguel Santos Espino
 PreemptiveScheduler* preemptiveScheduler = NULL;
@@ -33,8 +33,10 @@ SynchDisk   *synchDisk;
 #endif
 
 #ifdef USER_PROGRAM	// requires either FILESYS or FILESYS_STUB
-Machine *machine;	// user program memory and registers
+Machine* machine;	// user program memory and registers
 BitMap* physicalPageMap; // Bit map de control de la memoria fisica
+BitMap* secondChance;
+int currentChance;
 Mutex* canAccessConsole;
 #endif
 
@@ -67,8 +69,7 @@ extern void Cleanup();
 //		whether it needs it or not.
 //----------------------------------------------------------------------
 static void
-TimerInterruptHandler(void* dummy)
-{
+TimerInterruptHandler(void* dummy) {
     if (interrupt->getStatus() != IdleMode)
 	interrupt->YieldOnReturn();
 }

@@ -38,8 +38,7 @@
 // simulated machine's format of little endian.  These end up
 // being NOPs when the host machine is also little endian (DEC and Intel).
 
-unsigned int
-WordToHost(unsigned int word) {
+unsigned int WordToHost(unsigned int word) {
 #ifdef HOST_IS_BIG_ENDIAN
 	 register unsigned long result;
 	 result = (word >> 24) & 0x000000ff;
@@ -52,8 +51,7 @@ WordToHost(unsigned int word) {
 #endif /* HOST_IS_BIG_ENDIAN */
 }
 
-unsigned short
-ShortToHost(unsigned short shortword) {
+unsigned short ShortToHost(unsigned short shortword) {
 #ifdef HOST_IS_BIG_ENDIAN
 	 register unsigned short result;
 	 result = (shortword << 8) & 0xff00;
@@ -64,11 +62,10 @@ ShortToHost(unsigned short shortword) {
 #endif /* HOST_IS_BIG_ENDIAN */
 }
 
-unsigned int
-WordToMachine(unsigned int word) { return WordToHost(word); }
+unsigned int WordToMachine(unsigned int word){return WordToHost(word);}
 
 unsigned short
-ShortToMachine(unsigned short shortword) { return ShortToHost(shortword); }
+ShortToMachine(unsigned short shortword){return ShortToHost(shortword);}
 
 
 //----------------------------------------------------------------------
@@ -84,41 +81,38 @@ ShortToMachine(unsigned short shortword) { return ShortToHost(shortword); }
 //	"value" -- the place to write the result
 //----------------------------------------------------------------------
 
-bool
-Machine::ReadMem(int addr, int size, int *value)
-{
-    int data;
-    ExceptionType exception;
-    int physicalAddress;
-    
-    DEBUG('a', "Reading VA 0x%x, size %d\n", addr, size);
-    
-    exception = Translate(addr, &physicalAddress, size, false);
-    if (exception != NoException) {
-	machine->RaiseException(exception, addr);
-	return false;
-    }
-    switch (size) {
-      case 1:
-	data = machine->mainMemory[physicalAddress];
-	*value = data;
-	break;
-	
-      case 2:
-	data = *(unsigned short *) &machine->mainMemory[physicalAddress];
-	*value = ShortToHost(data);
-	break;
-	
-      case 4:
-	data = *(unsigned int *) &machine->mainMemory[physicalAddress];
-	*value = WordToHost(data);
-	break;
+bool Machine::ReadMem(int addr, int size, int* value) {
+	int data;
+	ExceptionType exception;
+	int physicalAddress;
 
-      default: ASSERT(false);
-    }
-    
-    DEBUG('a', "\tvalue read = %8.8x\n", *value);
-    return true;
+	DEBUG('a', "Reading VA 0x%x, size %d\n", addr, size);
+
+	// Traduce direccion virtual en fisica
+	exception = Translate(addr, &physicalAddress, size, false);
+	// Revisa si esta traduccion genero una excepcion
+	if (exception != NoException) {
+		machine->RaiseException(exception, addr);
+		return false;
+	}
+	// Respecto al tamaño de lectura lee de una forma o otra
+	switch (size) {
+		case 1:
+			data = machine->mainMemory[physicalAddress];
+			*value = data;
+			break;
+		case 2:
+			data = *(unsigned short *) &machine->mainMemory[physicalAddress];
+			*value = ShortToHost(data);
+			break;
+		case 4:
+			data = *(unsigned int *) &machine->mainMemory[physicalAddress];
+			*value = WordToHost(data);
+			break;
+		default: ASSERT(false);
+  }
+	DEBUG('a', "\tvalue read = %8.8x\n", *value);
+	return true;
 }
 
 //----------------------------------------------------------------------
@@ -134,38 +128,36 @@ Machine::ReadMem(int addr, int size, int *value)
 //	"value" -- the data to be written
 //----------------------------------------------------------------------
 
-bool
-Machine::WriteMem(int addr, int size, int value)
-{
-    ExceptionType exception;
-    int physicalAddress;
-     
-    DEBUG('a', "Writing VA 0x%x, size %d, value 0x%x\n", addr, size, value);
+bool Machine::WriteMem(int addr, int size, int value) {
+	ExceptionType exception;
+	int physicalAddress;
 
-    exception = Translate(addr, &physicalAddress, size, true);
-    if (exception != NoException) {
-	machine->RaiseException(exception, addr);
-	return false;
-    }
-    switch (size) {
-      case 1:
-	machine->mainMemory[physicalAddress] = (unsigned char) (value & 0xff);
-	break;
+	DEBUG('a', "Writing VA 0x%x, size %d, value 0x%x\n", addr, size, value);
 
-      case 2:
-	*(unsigned short *) &machine->mainMemory[physicalAddress]
-		= ShortToMachine((unsigned short) (value & 0xffff));
-	break;
-      
-      case 4:
-	*(unsigned int *) &machine->mainMemory[physicalAddress]
-		= WordToMachine((unsigned int) value);
-	break;
-	
-      default: ASSERT(false);
-    }
-    
-    return true;
+	// Traduce direccion virtual en fisica
+	exception = Translate(addr, &physicalAddress, size, true);
+	// Revisa si esta traduccion genero una excepcion
+	if (exception != NoException) {
+		machine->RaiseException(exception, addr);
+		return false;
+	}
+	// Respecto al tamaño de la escritura utiliza un case
+	switch (size) {
+		case 1:
+			machine->mainMemory[physicalAddress] = (unsigned char) (value & 0xff);
+			break;
+		case 2:
+			*(unsigned short *) &machine->mainMemory[physicalAddress]
+			= ShortToMachine((unsigned short) (value & 0xffff));
+			break;
+		case 4:
+			*(unsigned int *) &machine->mainMemory[physicalAddress]
+			= WordToMachine((unsigned int) value);
+			break;
+		default: ASSERT(false);
+	}
+
+	return true;
 }
 
 //----------------------------------------------------------------------
@@ -183,73 +175,80 @@ Machine::WriteMem(int addr, int size, int value)
 // 	"writing" -- if true, check the "read-only" bit in the TLB
 //----------------------------------------------------------------------
 
-ExceptionType
-Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
-{
-    int i;
-    unsigned int vpn, offset;
-    TranslationEntry *entry;
-    unsigned int pageFrame;
+ExceptionType Machine::Translate(int virtAddr, int* physAddr,
+	int size, bool writing) {
+	// Variables
+	int i;
+	unsigned int vpn, offset;
+	TranslationEntry* entry;
+	unsigned int pageFrame;
 
-    DEBUG('a', "\tTranslate 0x%x, %s: ", virtAddr, writing ? "write" : "read");
+	DEBUG('a', "\tTranslate 0x%x, %s: ", virtAddr, writing ? "write" : "read");
 
-// check for alignment errors
-    if (((size == 4) && (virtAddr & 0x3)) || ((size == 2) && (virtAddr & 0x1))){
-	DEBUG('a', "alignment problem at %d, size %d!\n", virtAddr, size);
-	return AddressErrorException;
-    }
-    
-    // we must have either a TLB or a page table, but not both!
-    ASSERT(tlb == NULL || pageTable == NULL);	
-    ASSERT(tlb != NULL || pageTable != NULL);	
-
-// calculate the virtual page number, and offset within the page,
-// from the virtual address
-    vpn = (unsigned) virtAddr / PageSize;
-    offset = (unsigned) virtAddr % PageSize;
-    
-    if (tlb == NULL) {		// => page table => vpn is index into table
-	if (vpn >= pageTableSize) {
-	    DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
-			virtAddr, pageTableSize);
-	    return AddressErrorException;
-	} else if (!pageTable[vpn].valid) {
-	    DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
-			virtAddr, pageTableSize);
-	    return PageFaultException;
+	// check for alignment errors
+	if (((size == 4) && (virtAddr & 0x3)) || ((size == 2) && (virtAddr & 0x1))){
+		DEBUG('a', "alignment problem at %d, size %d!\n", virtAddr, size);
+		return AddressErrorException;
 	}
-	entry = &pageTable[vpn];
-    } else {
-        for (entry = NULL, i = 0; i < TLBSize; i++)
-    	    if (tlb[i].valid && (tlb[i].virtualPage == (int)vpn)) {
-		entry = &tlb[i];			// FOUND!
-		break;
-	    }
-	if (entry == NULL) {				// not found
-    	    DEBUG('a', "*** no valid TLB entry found for this virtual page!\n");
-    	    return PageFaultException;		// really, this is a TLB fault,
-						// the page may be in memory,
-						// but not in the TLB
+	// we must have either a TLB or a page table, but not both!
+	ASSERT(tlb == NULL || pageTable == NULL);
+	ASSERT(tlb != NULL || pageTable != NULL);	
+	// calculate the virtual page number, and offset within the page,
+	// from the virtual address
+	vpn = (unsigned) virtAddr / PageSize;
+	offset = (unsigned) virtAddr % PageSize;
+	// Varifica si se utiliza page table
+	if (tlb == NULL) {		// => page table => vpn is index into table
+		if (vpn >= pageTableSize) { // El index es mayor al tamaño del pageTable
+			DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
+			virtAddr, pageTableSize);
+			return AddressErrorException;
+		} else if (!pageTable[vpn].valid) { // Verifica si el bit es valido
+			DEBUG('a', "virtual page # %d too large for page table size %d!\n", 
+			virtAddr, pageTableSize);
+			return PageFaultException;
+		}
+		// Si el bit es valido colocamos el TranslationEntry en la variable entry 
+		entry = &pageTable[vpn];
+	} else { // Algoritmo para la TLB
+		// Recorre la tlb hasta encontrar el index correspondiente
+		for (entry = NULL, i = 0; i < TLBSize; i++)
+			// Verifica el index y su valid bit, si esto es correcto se coloca
+			// el TranslationEntry en entry
+			if (tlb[i].valid && (tlb[i].virtualPage == (int)vpn)) {
+				entry = &tlb[i];			// FOUND!
+				break;
+			}
+		// Si nunca se encotro un entry se genera un PageFaultException
+		if (entry == NULL) {				// not found
+			DEBUG('a', "*** no valid TLB entry found for this virtual page!\n");
+			return PageFaultException;		// really, this is a TLB fault,
+			// the page may be in memory,
+			// but not in the TLB
+		}
 	}
-    }
 
-    if (entry->readOnly && writing) {	// trying to write to a read-only page
-	DEBUG('a', "%d mapped read-only at %d in TLB!\n", virtAddr, i);
-	return ReadOnlyException;
-    }
-    pageFrame = entry->physicalPage;
+	// Si la pagina es read only y se quiere escribir se genera una excepcion
+	if (entry->readOnly && writing) {	// trying to write to a read-only page
+		DEBUG('a', "%d mapped read-only at %d in TLB!\n", virtAddr, i);
+		return ReadOnlyException;
+	}
+	// Extrae el numero de pagina fisica
+	pageFrame = entry->physicalPage;
 
-    // if the pageFrame is too big, there is something really wrong! 
-    // An invalid translation was loaded into the page table or TLB. 
-    if (pageFrame >= NumPhysPages) { 
-	DEBUG('a', "*** frame %d > %d!\n", pageFrame, NumPhysPages);
-	return BusErrorException;
-    }
-    entry->use = true;		// set the use, dirty bits
-    if (writing)
-	entry->dirty = true;
-    *physAddr = pageFrame * PageSize + offset;
-    ASSERT((*physAddr >= 0) && ((*physAddr + size) <= MemorySize));
-    DEBUG('a', "phys addr = 0x%x\n", *physAddr);
-    return NoException;
+	// if the pageFrame is too big, there is something really wrong! 
+	// An invalid translation was loaded into the page table or TLB. 
+	if (pageFrame >= NumPhysPages) { 
+		DEBUG('a', "*** frame %d > %d!\n", pageFrame, NumPhysPages);
+		return BusErrorException;
+	}
+	entry->use = true;		// set the use, dirty bits
+	// Si se va a escribir se coloca el dirty bit
+	if (writing)
+		entry->dirty = true;
+	// Se extrae la pagina fisica y se coloca sobre physAddr
+	*physAddr = pageFrame * PageSize + offset;
+	ASSERT((*physAddr >= 0) && ((*physAddr + size) <= MemorySize));
+	DEBUG('a', "phys addr = 0x%x\n", *physAddr);
+	return NoException;
 }
