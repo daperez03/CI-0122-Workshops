@@ -17,6 +17,8 @@
 #include "timer.h"
 #include "bitmap.h"
 #include "synch.h"
+#include "../vm/Map.hpp"
+#include "../vm/BackingStore.hpp"
 
 // Initialization and cleanup routines
 extern void Initialize(int argc, char **argv); 	// Initialization,
@@ -35,9 +37,14 @@ extern Timer *timer;				// the hardware alarm clock
 #include "machine.h"
 extern Machine* machine;	// user program memory and registers
 extern BitMap* physicalPageMap; // Bit map de control de la memoria fisica
-extern BitMap* secondChance;
-extern int currentChance;
 extern Mutex* canAccessConsole;
+#endif
+
+#ifdef VM
+extern Map<Thread*, AddrSpace*> invertedTable;
+extern BackingStore* backingStore;
+extern int tlbIndex;
+extern int physicalIndex;
 #endif
 
 #ifdef FILESYS_NEEDED 		// FILESYS or FILESYS_STUB 
