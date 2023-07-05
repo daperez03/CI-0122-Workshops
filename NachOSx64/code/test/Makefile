@@ -43,6 +43,12 @@ start.o: start.s ../userprog/syscall.h
 	$(AS) $(ASFLAGS) -o start.o strt.s
 	/bin/rm strt.s
 
+addrspacetest.o: addrspacetest.c
+	$(CC) $(CFLAGS) -c addrspacetest.c
+addrspacetest: addrspacetest.o start.o
+	$(LD) $(LDFLAGS) start.o addrspacetest.o -o addrspacetest.coff
+	../bin/coff2noff addrspacetest.coff addrspacetest
+
 copy.o: copy.c
 	$(CC) $(CFLAGS) -c copy.c
 copy: copy.o start.o
