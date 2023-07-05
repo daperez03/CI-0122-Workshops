@@ -20,14 +20,18 @@
 // Run a user program.  Open the executable, load it into
 // memory, and jump to it.
 //----------------------------------------------------------------------
-void StartProcess(const char *filename) {
-  OpenFile *executable = fileSystem->Open(filename);
+void StartProcess(const char* filename) {
+  OpenFile* executable = fileSystem->Open(filename);
 
   if (executable == NULL) {
     printf("Unable to open file %s\n", filename);
     return;
   }
+  #ifdef VM
+  currentThread->space = new AddrSpace(executable, filename);
+  #else
   currentThread->space = new AddrSpace(executable);
+  #endif
   currentThread->fileTable = new ControlTable<int>();
   currentThread->threadTable = new ControlTable<Thread*>();
   currentThread->semTable = new ControlTable<Semaphore*>();

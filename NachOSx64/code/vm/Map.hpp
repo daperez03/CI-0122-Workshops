@@ -26,18 +26,10 @@ class Map {
     }
 
     Object& operator[](const Key key) {
-      size_t index = ERROR_CODE;
-      for (size_t i = 0; i < this->capacity; ++i) {
-        if (key == this->keys[i]) {
-          index = i;
-          break;
-        }
-      }
-      if (index != ERROR_CODE) {
-        return this->array[index]; 
-      }
-      Object* error = new Object();
-      return *error;
+      ssize_t index = -1;
+      while (key != this->keys[++index] &&
+        (size_t)index < this->count);
+      return this->array[index];
     }
 
     void insert(Key key, Object object) {
@@ -51,6 +43,33 @@ class Map {
       this->keys[this->count] = key;
       this->array[this->count++] = object;
     }
+
+    void remove(Key key) {
+      ssize_t index = -1;
+      while (key != this->keys[++index]);
+      for (size_t i = index; i < count; ++i) {
+        if (i + 1 < count) {
+          this->keys[i] = this->keys[i + 1];
+          this->array[i] = this->array[i + 1];
+        }
+      }
+      --count;
+    }
+    
+    size_t getCount() {
+      return this->count;
+    }
+
+    Key* getKeys() {
+      Key* copyKeys = nullptr;
+      if (this->count > 0) {
+        copyKeys = new Key[this->count];
+        for (size_t i = 0; i < this->count; ++i)
+          copyKeys[i] = this->keys[i];
+      }
+      return copyKeys;
+    }
+
 };
 
 #endif

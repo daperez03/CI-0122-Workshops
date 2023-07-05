@@ -18,20 +18,32 @@
 #include "translate.h"
 
 #define UserStackSize		1024 	// increase this as necessary!
+#define FILE_NAME_SIZE 1000
+
+class Thread;
 
 /// @brief Clase que maneja memoria Fisica/Virtual
 class AddrSpace {
   public:
+    #ifdef VM
+    AddrSpace(OpenFile* executable, const char* programName);
+    AddrSpace(const AddrSpace& father, Thread* thread);
+    void FindPage(int& availablePage, TranslationEntry*& pageOut);
+    TranslationEntry** getPhysicalPageTable();
+    void updataPageTables();
+    TranslationEntry* secondChance(
+      TranslationEntry* table, int& index, int range);
+    TranslationEntry* secondChance(
+      TranslationEntry** table, int& index, int range);
+    #else
     /// @brief Crea un nuevo address space para un ejecutable
     /// @param executable Archvio ejecutable de Mips
-    AddrSpace(OpenFile*);	// Create an address space,
-      // initializing it with the program
-      // stored in the file "executable"
-    
+    AddrSpace(OpenFile* executable);	// Create an address space,
     /// @brief Constructor por copia de address space
     /// @details Copia el segmento de codigo y datos del original y agrega un nuvo stack
     /// @param father Address space a copiar
-    AddrSpace(const AddrSpace&);
+    AddrSpace(const AddrSpace& father);
+    #endif
 
     /// @brief Destructor por default de address space
     ~AddrSpace();  // De-allocate an address space
@@ -48,7 +60,9 @@ class AddrSpace {
     /// @brief Informacion sobre el context switch
     void RestoreState();  // info on a context switch
 
+    #ifdef VM 
     void PageFaultException(); 
+    #endif
 
   private:
     /// @brief Tabla de paginas
@@ -59,7 +73,9 @@ class AddrSpace {
       // address space
     /// @brief numero de usuarios del address space
     int usage = 1;
-    OpenFile* executable;
+    #ifdef VM 
+    char file[FILE_NAME_SIZE];
+    #endif
 };
 
 #endif // ADDRSPACE_H

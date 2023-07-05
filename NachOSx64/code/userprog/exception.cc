@@ -137,9 +137,15 @@ void NachOSForkThread(void * addr) { // for 64 bits version
 }
 
 /// @brief Carga un programa sobre un thread
-/// @param file nombre del programa
-void execProcess(void* file) {
-  currentThread->space = new AddrSpace((OpenFile*)file);
+/// @param argv nombre del programa
+void execProcess(void* param) {
+  void** argv = (void**)param;
+  #ifdef VM
+  currentThread->space =
+    new AddrSpace((OpenFile*)argv[0], (char*)argv[1]);
+  #else
+  currentThread->space = new AddrSpace((OpenFile*)argv[0]);
+  #endif
   currentThread->space->InitRegisters();
   currentThread->space->RestoreState();
   machine->Run();
@@ -180,7 +186,8 @@ void NachOS_Exec() {		// System call 2
     Thread* newThread = new Thread ("New process");
     status = currentThread->threadTable->Open(newThread);
     ShareResources(currentThread, newThread);
-    newThread->Fork(execProcess, executable);
+    void* argv[2] = {executable, programName};
+    newThread->Fork(execProcess, argv);
   } else status = -1;
   RETURN(status);
 }
@@ -338,7 +345,12 @@ void NachOS_Fork() {		// System call 9
   DEBUG('S', "System Call: NachOS_Fork.\n");
   DEBUG( 'u', "Entering Fork System call\n" );
   Thread* newThread = new Thread("Child to execute Fork");
+  #ifdef VM
+  newThread->space =
+    new AddrSpace(*currentThread->space, newThread);
+  #else
   newThread->space = new AddrSpace(*currentThread->space);
+  #endif
   currentThread->threadTable->Open(newThread);
   ShareResources(currentThread, newThread);
   newThread->Fork(NachOSForkThread, (void*)(long)READ_PARAM(1));
@@ -854,8 +866,9 @@ void ExceptionHandler(ExceptionType which) {
       getNextInstruction();
       break;
     case PageFaultException:
-      // TODO(me): make exception for the PageFault
+      #ifdef VM 
       currentThread->space->PageFaultException();
+      #endif 
       break;
     case ReadOnlyException:
       printf( "Read Only exception (%d)\n", which );

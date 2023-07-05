@@ -1,4 +1,4 @@
-#define VM
+// #define VM
 #ifdef VM 
 
 // TODO(us): Adaptar a memoria virtual
@@ -21,9 +21,9 @@
 // of liability and disclaimer of warranty provisions.
 
 #include "copyright.h"
-#include "system.h"
 #include "addrspace.h"
 #include "noff.h"
+#include "system.h"
 
 #define NO_PHYSYCAL_PAGE -1
 
@@ -62,13 +62,13 @@ static void SwapHeader (NoffHeader *noffH) {
 //	"executable" is the file containing the object code to load into memory
 //----------------------------------------------------------------------
 
-AddrSpace::AddrSpace(OpenFile* exec) {
+AddrSpace::AddrSpace(OpenFile* executable, const char* programName) {
   DEBUG('A', "AddrSpace: executable constructor.\n");
   NoffHeader noffH;
   unsigned int size;
-  this->executable = exec;
-
-  stats->numDiskReads += executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
+  strcpy(this->file, programName);
+  stats->numDiskReads +=
+    executable->ReadAt((char*)&noffH, sizeof(noffH), 0);
   if ((noffH.noffMagic != NOFFMAGIC) &&
     (WordToHost(noffH.noffMagic) == NOFFMAGIC))
     SwapHeader(&noffH);
@@ -78,8 +78,8 @@ AddrSpace::AddrSpace(OpenFile* exec) {
   size = noffH.code.size + noffH.initData.size
     + noffH.uninitData.size + UserStackSize;	// we need to increase the size
   // to leave room for the stack
-  numPages = divRoundUp(size, PageSize);
-  size = numPages * PageSize;
+  this->numPages = divRoundUp(size, PageSize);
+  size = this->numPages * PageSize;
 
   // TODO(me): Revisar respecto al espacio del backing store
   // ASSERT(numPages <= NumPhysPages);		// check we're not trying
@@ -89,32 +89,32 @@ AddrSpace::AddrSpace(OpenFile* exec) {
   // virtual memory
 
   DEBUG('a', "Initializing address space, num pages %d, size %d\n", 
-    numPages, size);
+    this->numPages, size);
   // first, set up the translation
-  this->pageTable = new TranslationEntry[numPages];
-  unsigned int codeArea = noffH.code.size % PageSize;
+  this->pageTable = new TranslationEntry[this->numPages];
+  unsigned int codeSize = noffH.code.size % PageSize;
   for (size_t i = 0; i < numPages; ++i) {
     this->pageTable[i].virtualPage = i;
     this->pageTable[i].physicalPage = NO_PHYSYCAL_PAGE;
     this->pageTable[i].valid = false;
     this->pageTable[i].use = false;
     this->pageTable[i].dirty = false;
-    if (i < codeArea) {
-      // if page is only code is read only
-      this->pageTable[i].readOnly = true;
-    } else {
-      // if the code segment was entirely on
+    if (i < codeSize) { // TODO(me): revisar
+      this->pageTable[i].readOnly = false;
+    } else { // if the code segment was entirely on
       this->pageTable[i].readOnly = false;
     }
   }
+  invertedTable.insert(currentThread, this);
 }
 
-AddrSpace::AddrSpace(const AddrSpace& father) {
+AddrSpace::AddrSpace(const AddrSpace& father, Thread* thread) {
   DEBUG('A', "AddrSpace: Copy constructor.\n");
   // TODO(me): Revisar el manejo de usage
   ++this->usage;
   this->numPages = father.numPages;
   this->pageTable = new TranslationEntry[numPages];
+  strcpy(this->file, father.file);
   // int stackPagesInit =
     // this->numPages - divRoundUp(UserStackSize, PageSize);
   // TODO(me): Revisar respecto al espacio del backing store
@@ -122,13 +122,15 @@ AddrSpace::AddrSpace(const AddrSpace& father) {
   for (unsigned int i = 0; i < this->numPages; ++i) {
     // TODO(us): Verificar como copiar page
     this->pageTable[i].physicalPage = NO_PHYSYCAL_PAGE;
-    this->pageTable[i].virtualPage = father.pageTable[i].virtualPage;
+    this->pageTable[i].virtualPage = i;
     // TODO(me): Poner en invalido
-    this->pageTable[i].valid = father.pageTable[i].valid;
-    this->pageTable[i].use = father.pageTable[i].use;
-    this->pageTable[i].dirty = father.pageTable[i].dirty;
-    this->pageTable[i].readOnly = father.pageTable[i].readOnly;
+    this->pageTable[i].valid = false;
+    this->pageTable[i].use = false;
+    this->pageTable[i].dirty = false;
+    this->pageTable[i].readOnly =
+      father.pageTable[i].readOnly;
   }
+  invertedTable.insert(thread, this);
 }
 
 
@@ -139,25 +141,18 @@ AddrSpace::AddrSpace(const AddrSpace& father) {
 AddrSpace::~AddrSpace() {
   DEBUG('A', "AddrSpace: default destructor.\n");
   // Limpiar memoria
-  int globalPage = this->numPages -
-    divRoundUp(UserStackSize, PageSize);
-  // TODO(me): Revisar el manejo de usage
-  if (--this->usage == 0) {
-    // Elimina memoria de la seccion de codigo y datos 
-    for (int i = 0; i < globalPage; ++i) {
-      int page = this->pageTable[i].physicalPage;
-      physicalPageMap->Clear(page);
-      bzero(machine->mainMemory + page * PageSize, PageSize);
-    }
-  }
-  // Elimina memoria del stack
-  for (int i = globalPage; i < (int)this->numPages; ++i) {
-    int page = this->pageTable[i].physicalPage;
-    if (page != NO_PHYSYCAL_PAGE) {
-      physicalPageMap->Clear(page);
-      bzero(machine->mainMemory + page * PageSize, PageSize);
-    } else {
-      // TODO(me): eliminar del backing store
+  for (size_t i = 0; i < this->numPages; ++i) {
+    int currentPage = this->pageTable[i].physicalPage;
+    if (this->pageTable[i].valid &&
+      currentPage != NO_PHYSYCAL_PAGE) {
+      physicalPageMap->Clear(currentPage);
+      void* address =
+        &machine->mainMemory[currentPage * PageSize];
+      bzero(address, PageSize);
+    } else if (this->pageTable[i].valid &&
+      !this->pageTable[i].readOnly) {
+      char* buffer = backingStore->remove(&this->pageTable[i]);
+      delete buffer;
     }
   }
   delete pageTable;
@@ -201,7 +196,7 @@ void AddrSpace::InitRegisters() {
 
 void AddrSpace::SaveState() {
   DEBUG('A', "AddrSpace: SaveState.\n");
-
+  this->updataPageTables();
 }
 
 //----------------------------------------------------------------------
@@ -214,25 +209,167 @@ void AddrSpace::SaveState() {
 
 void AddrSpace::RestoreState() {
   DEBUG('A', "AddrSpace: RestoreState.\n");
-  machine->pageTable = pageTable;
-  machine->pageTableSize = numPages;
+  for (size_t i = 0; i < TLBSize; ++i) {
+    machine->tlb[i].valid = false;
+  }
 }
 
 void AddrSpace::PageFaultException() {
+  this->updataPageTables();
+  ++stats->numPageFaults;
   int addr = machine->ReadRegister(BadVAddrReg);
+  ASSERT(addr >= 0);
   unsigned int vpn = (unsigned) addr / PageSize;
+  DEBUG('D', "Virtual Page = %i\n", vpn);
+  int position = vpn * PageSize;
+  ASSERT(vpn >= 0);
+  DEBUG('D', "Position = %i\n", position);
   TranslationEntry* pageIn = &this->pageTable[vpn];
-  TranslationEntry* pageOut = nullptr;
-  char buffer[PageSize];
-  bzero(buffer, PageSize);
-  if (!pageIn->valid || pageIn->readOnly ||
-    !pageIn->dirty) {
-    int position = noffH.code.inFileAddr + (vpn * PageSize);
+  ASSERT(pageIn);
+  // Algoritmo de remplazo a TLB
+  TranslationEntry* pageOut = this->secondChance(machine->tlb,
+  tlbIndex, TLBSize);
+  ASSERT(pageOut);
+  DEBUG('D', "PageIn->valid = %i\n", pageIn->valid);
+  DEBUG('D', "PageIn->dirty = %i\n", pageIn->dirty);
+  if (pageOut->valid)
+    DEBUG('D', "PageOut->virtualPage = %i\n",
+      pageOut->virtualPage);
+  DEBUG('D', "PageOut->valid = %i\n", pageOut->valid);
+  DEBUG('D', "PageOut->dirty = %i\n", pageOut->dirty);
+
+  if ((pageIn->valid && !pageIn->dirty &&
+    pageIn->physicalPage == NO_PHYSYCAL_PAGE) ||
+    pageIn->readOnly || !pageIn->valid) {
+    TranslationEntry* pageOutPT = nullptr;
+    int availablePage = NO_PHYSYCAL_PAGE;
+    // Pagina a remplazar o utilizar
+    FindPage(availablePage, pageOutPT);
+    OpenFile* executable = fileSystem->Open(this->file);
+    ASSERT(executable);
+    NoffHeader noffH;
     stats->numDiskReads +=
-      this->executable->ReadAt(buffer, PageSize, position);
-    //TODO(us):Find page replace
+      executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
+    if (availablePage == NO_PHYSYCAL_PAGE) {
+      DEBUG('D', "Se coloca la pageOutPT en swap\n");
+      if (pageOutPT->valid)
+        DEBUG('D', "pageOutPT->virtualPage = %i\n",
+          pageOutPT->virtualPage);
+      DEBUG('D', "pageOutPT->valid = %i\n", pageOutPT->valid);
+      DEBUG('D', "pageOutPT->dirty = %i\n", pageOutPT->dirty);
+      availablePage = pageOutPT->physicalPage;
+      backingStore->pageOut(pageOutPT);
+    }
+    ASSERT(availablePage != NO_PHYSYCAL_PAGE);
+    pageIn->physicalPage = availablePage;
+    char* into = &machine->mainMemory[availablePage * PageSize];
+    int physicalPosition = noffH.code.inFileAddr + position;
+    int executableSize = noffH.code.size + noffH.initData.size;
+    bzero(into, PageSize);
+    if (position < executableSize) {
+      DEBUG('D', "Busca en el ejecutable %s\n\n", this->file);
+      stats->numDiskReads +=
+        executable->ReadAt(into, PageSize, physicalPosition);
+    } else DEBUG('D', "Limpia zona de stack/DNI\n\n");
+    delete executable;
+
+  } else if (pageIn->physicalPage == NO_PHYSYCAL_PAGE) {
+    DEBUG('D', "Busca en el backingStore\n\n");
+    // Buscar en backingStore
+    TranslationEntry** table = this->getPhysicalPageTable();
+    TranslationEntry* pageOutPT =
+      this->secondChance(table, physicalIndex, NumPhysPages);
+    backingStore->pageIn(pageIn, pageOutPT);
+    delete table;
+
+  } else DEBUG('D', "Ya la pagina existe en memoria\n\n");
+  ASSERT(pageOut);
+  ASSERT(pageIn);
+  pageIn->valid = true;
+  pageIn->use = true;
+  //TODO(me): Escribir en cache su remplazo
+  memcpy(pageOut, pageIn, sizeof(TranslationEntry));
+  ASSERT(!memcmp(pageOut, pageIn, sizeof(TranslationEntry)));
+}
+
+void AddrSpace::FindPage(int& availablePage,
+  TranslationEntry*& pageOut) {
+  availablePage = physicalPageMap->Find();
+  if (availablePage == NO_PHYSYCAL_PAGE) {
+    TranslationEntry** table = this->getPhysicalPageTable();
+    pageOut = this->secondChance(table,
+      physicalIndex, NumPhysPages);
+    delete table;
   }
-  //TODO(me): Algoritmo de remplazo
+}
+
+TranslationEntry** AddrSpace::getPhysicalPageTable() {
+  TranslationEntry** PhysicalPageTable =
+    new TranslationEntry*[NumPhysPages];
+  int iterator = 0;
+  Thread** keys = invertedTable.getKeys();
+  size_t size = invertedTable.getCount();
+  for (size_t i = 0; i < size; ++i) {
+    AddrSpace* addrSpace = invertedTable[keys[i]];
+    TranslationEntry* table = addrSpace->pageTable;
+    for (size_t j = 0; j < addrSpace->numPages; ++j) {
+      if (table[j].physicalPage != NO_PHYSYCAL_PAGE) {
+        PhysicalPageTable[iterator++] = &table[j];
+      }
+    }
+  }
+  delete[] keys;
+  return PhysicalPageTable;
+}
+
+TranslationEntry* AddrSpace::secondChance(
+  TranslationEntry* table, int& index, int range) {
+  ASSERT(table);
+  while (table[index].use && table[index].valid) {
+    ASSERT(index < range);
+    if (table[index].physicalPage != NO_PHYSYCAL_PAGE) {
+      table[index].use = false;
+    }
+    index = (index + 1) % range;
+  }
+  TranslationEntry* swapPage = &table[index];
+  index = (index + 1) % range;
+  return swapPage;
+}
+
+TranslationEntry* AddrSpace::secondChance(
+  TranslationEntry** table, int& index, int range) {
+  ASSERT(table);
+  while (table[index]->use && table[index]->valid) {
+    ASSERT(index < range);
+    if (table[index]->physicalPage != NO_PHYSYCAL_PAGE) {
+      table[index]->use = false;
+    }
+    index = (index + 1) % range;
+  }
+  return table[index];
+}
+
+
+void AddrSpace::updataPageTables() {
+  Thread** keys = invertedTable.getKeys();
+  size_t size = invertedTable.getCount();
+  if (keys != nullptr) {
+    for (size_t it1 = 0; it1 < TLBSize; ++it1) {
+      TranslationEntry* currentPage = &machine->tlb[it1];
+      for (size_t it2 = 0; it2 < size; ++it2) {
+        AddrSpace* addrSpace = invertedTable[keys[it2]];
+        TranslationEntry* table = addrSpace->pageTable;
+        for (size_t it3 = 0; it3 < addrSpace->numPages; ++it3) {
+          if (table[it3].physicalPage == currentPage->physicalPage) {
+            table[it3].dirty = currentPage->dirty;
+            table[it3].valid = currentPage->valid;
+          }
+        }
+      }
+    }
+    delete keys;
+  }
 }
 
 #endif

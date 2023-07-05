@@ -2,16 +2,12 @@
 #define BACKINGSTORE_HPP
 
 #include "Map.hpp"
-class Thread;
+#include "../threads/thread.h"
+#include "../machine/translate.h"
 
 class BackingStore {
   private:
-    typedef struct Key {
-      unsigned int vpn;
-      Thread* currentThread;
-    } Key;
-    
-    Map<Key, char*> backingStore;
+    Map<TranslationEntry*, char*> backingStore;
   public:
     BackingStore() = default;
     ~BackingStore() = default;
@@ -20,5 +16,6 @@ class BackingStore {
       TranslationEntry* pageOut);
     // Mueve una pagina de la memoria al BackingStore
     void pageOut(TranslationEntry* pageOut);
+    char* remove(TranslationEntry* pageOut);
 };
 #endif
