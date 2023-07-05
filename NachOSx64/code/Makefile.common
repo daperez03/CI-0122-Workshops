@@ -95,8 +95,8 @@ USERPROG_C = ../userprog/addrspace.cc\
 USERPROG_O = addrspace.o addrspaceVM.o bitmap.o exception.o progtest.o console.o machine.o \
 	mipssim.o translate.o
 
-VM_H = ../BackingStore.hpp ../Map.hpp
-VM_C = ../BackingStore.cpp
+VM_H = ../vm/BackingStore.hpp ../vm/Map.hpp
+VM_C = ../vm/BackingStore.cpp
 VM_O = BackingStore.o
 
 FILESYS_H =../filesys/directory.h \
