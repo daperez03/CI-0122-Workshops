@@ -60,15 +60,14 @@ void getNextInstruction() {
 /// @return Estado de la funcion ejecutada: 0 = Exit Success; -1 = Exit Failer
 int ReadMem(int addr, int bytes, char* dest) {
   memset(dest, 0, bytes);
-  bool error = false;
   int count = 0;
   for(int addrIterator = addr; addrIterator < addr + bytes; ++addrIterator) {
     int value = 0;
-    error = !machine->ReadMem(addrIterator, 1, &value) || error;
+    while (!machine->ReadMem(addrIterator, 1, &value));
     dest[count] = (char)value;
     if (dest[count++] == 0) break;
   }
-  return (error ? -1 : 0);
+  return 0;
 }
 
 /// @brief Leer un conjunto de caracteres de la memoria de NachOS
@@ -78,15 +77,14 @@ int ReadMem(int addr, int bytes, char* dest) {
 /// @return Estado de la funcion ejecutada: 0 = Exit Success; -1 = Exit Failer
 int ReadMemSTR(int addr, int bytes, char* dest) {
   memset(dest, 0, bytes);
-  bool error = false;
   int count = 0;
   for(int addrIterator = addr; addrIterator < addr + bytes; ++addrIterator) {
     int value = 0;
-    error = !machine->ReadMem(addrIterator, 1, &value) || error;
+    while (!machine->ReadMem(addrIterator, 1, &value));
     dest[count] = (char)value;
     if (dest[count++] == 0) break;
   }
-  return (error ? -1 : 0);
+  return 0;
 }
 
 /// @brief Escribir un conjunto de bytes sobre memoria de NachOS
@@ -95,13 +93,12 @@ int ReadMemSTR(int addr, int bytes, char* dest) {
 /// @param src Buffer con los datos
 /// @return Estado de la funcion ejecutada: 0 = Exit Success; -1 = Exit Failer
 int WriteMem(int addr, int bytes, char* src) {
-  bool error = false;
   int count = 0;
   for(int addrIterator = addr; addrIterator < addr + bytes; ++addrIterator) {
     int value = src[count++];
-    error = !machine->WriteMem(addrIterator, 1, value) || error;
+    while (!machine->WriteMem(addrIterator, 1, value));
   }
-  return (error ? -1 : 0);
+  return 0;
 }
 
 /// @brief Comparte recursos entre threads.
