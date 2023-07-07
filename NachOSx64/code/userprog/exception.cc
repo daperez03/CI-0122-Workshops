@@ -865,7 +865,7 @@ void ExceptionHandler(ExceptionType which) {
     case PageFaultException:
       #ifdef VM 
       currentThread->space->PageFaultException();
-      #endif 
+      #endif
       break;
     case ReadOnlyException:
       printf( "Read Only exception (%d)\n", which );

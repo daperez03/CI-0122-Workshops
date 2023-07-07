@@ -143,8 +143,7 @@ AddrSpace::~AddrSpace() {
   // Limpiar memoria
   for (size_t i = 0; i < this->numPages; ++i) {
     int currentPage = this->pageTable[i].physicalPage;
-    if (this->pageTable[i].valid &&
-      currentPage != NO_PHYSYCAL_PAGE) {
+    if (currentPage != NO_PHYSYCAL_PAGE) {
       physicalPageMap->Clear(currentPage);
       void* address =
         &machine->mainMemory[currentPage * PageSize];
@@ -155,6 +154,7 @@ AddrSpace::~AddrSpace() {
       delete buffer;
     }
   }
+  invertedTable.remove(currentThread);
   delete pageTable;
 }
 
@@ -218,78 +218,72 @@ void AddrSpace::PageFaultException() {
   this->updataPageTables();
   ++stats->numPageFaults;
   int addr = machine->ReadRegister(BadVAddrReg);
-  ASSERT(addr >= 0);
   unsigned int vpn = (unsigned) addr / PageSize;
-  DEBUG('D', "Virtual Page = %i\n", vpn);
   int position = vpn * PageSize;
-  ASSERT(vpn >= 0);
-  DEBUG('D', "Position = %i\n", position);
   TranslationEntry* pageIn = &this->pageTable[vpn];
-  ASSERT(pageIn);
   // Algoritmo de remplazo a TLB
   TranslationEntry* pageOut = this->secondChance(machine->tlb,
-  tlbIndex, TLBSize);
-  ASSERT(pageOut);
+    tlbIndex, TLBSize);
+
+  DEBUG('D', "PageIn->virtualPage = %i\n", pageIn->virtualPage);
   DEBUG('D', "PageIn->valid = %i\n", pageIn->valid);
   DEBUG('D', "PageIn->dirty = %i\n", pageIn->dirty);
-  if (pageOut->valid)
-    DEBUG('D', "PageOut->virtualPage = %i\n",
-      pageOut->virtualPage);
+  DEBUG('D', "PageOut->virtualPage = %i\n", pageOut->virtualPage);
   DEBUG('D', "PageOut->valid = %i\n", pageOut->valid);
   DEBUG('D', "PageOut->dirty = %i\n", pageOut->dirty);
 
-  if ((pageIn->valid && !pageIn->dirty &&
-    pageIn->physicalPage == NO_PHYSYCAL_PAGE) ||
-    pageIn->readOnly || !pageIn->valid) {
-    TranslationEntry* pageOutPT = nullptr;
-    int availablePage = NO_PHYSYCAL_PAGE;
-    // Pagina a remplazar o utilizar
-    FindPage(availablePage, pageOutPT);
-    OpenFile* executable = fileSystem->Open(this->file);
-    ASSERT(executable);
-    NoffHeader noffH;
-    stats->numDiskReads +=
-      executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
-    if (availablePage == NO_PHYSYCAL_PAGE) {
-      DEBUG('D', "Se coloca la pageOutPT en swap\n");
-      if (pageOutPT->valid)
-        DEBUG('D', "pageOutPT->virtualPage = %i\n",
-          pageOutPT->virtualPage);
-      DEBUG('D', "pageOutPT->valid = %i\n", pageOutPT->valid);
-      DEBUG('D', "pageOutPT->dirty = %i\n", pageOutPT->dirty);
-      availablePage = pageOutPT->physicalPage;
-      backingStore->pageOut(pageOutPT);
-    }
-    ASSERT(availablePage != NO_PHYSYCAL_PAGE);
-    pageIn->physicalPage = availablePage;
-    char* into = &machine->mainMemory[availablePage * PageSize];
-    int physicalPosition = noffH.code.inFileAddr + position;
-    int executableSize = noffH.code.size + noffH.initData.size;
-    bzero(into, PageSize);
-    if (position < executableSize) {
-      DEBUG('D', "Busca en el ejecutable %s\n\n", this->file);
+  if (pageIn->physicalPage == NO_PHYSYCAL_PAGE) {
+    if (pageIn->valid && pageIn->dirty && !pageIn->readOnly) {
+
+      DEBUG('D', "Busca en el backingStore\n\n");
+
+      // Buscar en backingStore
+      TranslationEntry** table = this->getPhysicalPageTable();
+      TranslationEntry* pageOutPT =
+        this->secondChance(table, physicalIndex, NumPhysPages);
+      backingStore->pageIn(pageIn, pageOutPT);
+      delete table;
+
+    } else {
+      TranslationEntry* pageOutPT = nullptr;
+      int availablePage = NO_PHYSYCAL_PAGE;
+      // Pagina a remplazar o utilizar
+      FindPage(availablePage, pageOutPT);
+      if (availablePage == NO_PHYSYCAL_PAGE) {
+
+        DEBUG('D', "Se coloca la pageOutPT en swap\n");
+        DEBUG('D', "pageOutPT->virtualPage = %i\n", pageOutPT->virtualPage);
+        DEBUG('D', "pageOutPT->valid = %i\n", pageOutPT->valid);
+        DEBUG('D', "pageOutPT->dirty = %i\n", pageOutPT->dirty);
+
+        availablePage = pageOutPT->physicalPage;
+        backingStore->pageOut(pageOutPT);
+      }
+
+      OpenFile* executable = fileSystem->Open(this->file);
+      NoffHeader noffH;
       stats->numDiskReads +=
-        executable->ReadAt(into, PageSize, physicalPosition);
-    } else DEBUG('D', "Limpia zona de stack/DNI\n\n");
-    delete executable;
+        executable->ReadAt((char *)&noffH, sizeof(noffH), 0);
+      pageIn->physicalPage = availablePage;
+      char* into = &machine->mainMemory[availablePage * PageSize];
+      int physicalPosition = noffH.code.inFileAddr + position;
+      int executableSize = noffH.code.size + noffH.initData.size;
+      bzero(into, PageSize);
+      if ((int)vpn <= divRoundUp(executableSize, PageSize)) {
+        DEBUG('D', "Busca en el ejecutable %s\n\n", this->file);
 
-  } else if (pageIn->physicalPage == NO_PHYSYCAL_PAGE) {
-    DEBUG('D', "Busca en el backingStore\n\n");
-    // Buscar en backingStore
-    TranslationEntry** table = this->getPhysicalPageTable();
-    TranslationEntry* pageOutPT =
-      this->secondChance(table, physicalIndex, NumPhysPages);
-    backingStore->pageIn(pageIn, pageOutPT);
-    delete table;
-
+        stats->numDiskReads +=
+          executable->ReadAt(into, PageSize, physicalPosition);
+      } else DEBUG('D', "Limpia zona de stack/DNI\n\n");
+      delete executable;
+    }
   } else DEBUG('D', "Ya la pagina existe en memoria\n\n");
   ASSERT(pageOut);
   ASSERT(pageIn);
   pageIn->valid = true;
   pageIn->use = true;
-  //TODO(me): Escribir en cache su remplazo
+  // Escribe en cache su remplazo
   memcpy(pageOut, pageIn, sizeof(TranslationEntry));
-  ASSERT(!memcmp(pageOut, pageIn, sizeof(TranslationEntry)));
 }
 
 void AddrSpace::FindPage(int& availablePage,

@@ -35,15 +35,22 @@ extern Timer *timer;				// the hardware alarm clock
 
 #ifdef USER_PROGRAM
 #include "machine.h"
-extern Machine* machine;	// user program memory and registers
-extern BitMap* physicalPageMap; // Bit map de control de la memoria fisica
+/// @brief user program memory and registers
+extern Machine* machine;
+// @brief Bit map de control de la memoria fisica
+extern BitMap* physicalPageMap;
+/// @brief Manejo de consola
 extern Mutex* canAccessConsole;
 #endif
 
 #ifdef VM
+/// @brief Tabla invertida de page table
 extern Map<Thread*, AddrSpace*> invertedTable;
+/// @brief Backing Store para almacenar las pages
 extern BackingStore* backingStore;
+/// @brief Index de la tlb para implementar secondChance
 extern int tlbIndex;
+/// @brief Index de la memoria para implementar secondChance
 extern int physicalIndex;
 #endif
 

@@ -33,6 +33,7 @@ void BackingStore::pageIn(TranslationEntry* pageIn,
 void BackingStore::pageOut(TranslationEntry* pageOut) {
   void* address = (void*)
     &machine->mainMemory[pageOut->physicalPage * PageSize];
+  physicalPageMap->Clear(pageOut->physicalPage);
   pageOut->physicalPage = NO_PHYSYCAL_PAGE;
   pageOut->use = true;
   pageOut->valid = true;

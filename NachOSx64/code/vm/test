@@ -1,124 +1,120 @@
-Virtual Page = 0
-Position = 0
+PageIn->virtualPage = 0
 PageIn->valid = 0
 PageIn->dirty = 0
+PageOut->virtualPage = 0
 PageOut->valid = 0
 PageOut->dirty = 0
-Busca en el ejecutable ../test/RW
+Busca en el ejecutable ../test/addrspacetest
 
-Virtual Page = 4
-Position = 512
+PageIn->virtualPage = 4
 PageIn->valid = 0
 PageIn->dirty = 0
+PageOut->virtualPage = 0
 PageOut->valid = 0
 PageOut->dirty = 0
-Busca en el ejecutable ../test/RW
+Busca en el ejecutable ../test/addrspacetest
 
-Virtual Page = 13
-Position = 1664
+PageIn->virtualPage = 13
 PageIn->valid = 0
 PageIn->dirty = 0
+PageOut->virtualPage = 0
 PageOut->valid = 0
 PageOut->dirty = 0
 Limpia zona de stack/DNI
 
-Virtual Page = 3
-Position = 384
+PageIn->virtualPage = 3
 PageIn->valid = 0
 PageIn->dirty = 0
+PageOut->virtualPage = 0
 PageOut->valid = 0
 PageOut->dirty = 0
-Busca en el ejecutable ../test/RW
+Busca en el ejecutable ../test/addrspacetest
 
-Virtual Page = 5
-Position = 640
+PageIn->virtualPage = 5
 PageIn->valid = 0
 PageIn->dirty = 0
 PageOut->virtualPage = 0
 PageOut->valid = 1
 PageOut->dirty = 0
-Busca en el ejecutable ../test/RW
+Busca en el ejecutable ../test/addrspacetest
 
-Virtual Page = 0
-Position = 0
-PageIn->valid = 1
-PageIn->dirty = 0
-PageOut->virtualPage = 4
-PageOut->valid = 1
-PageOut->dirty = 0
-Ya la pagina existe en memoria
-
-Virtual Page = 4
-Position = 512
-PageIn->valid = 1
+PageIn->virtualPage = 6
+PageIn->valid = 0
 PageIn->dirty = 0
 PageOut->virtualPage = 13
 PageOut->valid = 1
 PageOut->dirty = 1
-Ya la pagina existe en memoria
+Busca en el ejecutable ../test/addrspacetest
 
-Virtual Page = 13
-Position = 1664
-PageIn->valid = 1
-PageIn->dirty = 1
+PageIn->virtualPage = 7
+PageIn->valid = 0
+PageIn->dirty = 0
 PageOut->virtualPage = 3
 PageOut->valid = 1
 PageOut->dirty = 0
-Ya la pagina existe en memoria
+Limpia zona de stack/DNI
 
-Virtual Page = 12
-Position = 1536
+PageIn->virtualPage = 8
 PageIn->valid = 0
 PageIn->dirty = 0
 PageOut->virtualPage = 5
 PageOut->valid = 1
-PageOut->dirty = 0
+PageOut->dirty = 1
 Limpia zona de stack/DNI
 
-Virtual Page = 1
-Position = 128
-PageIn->valid = 0
-PageIn->dirty = 0
-PageOut->virtualPage = 13
-PageOut->valid = 1
-PageOut->dirty = 1
-Busca en el ejecutable ../test/RW
-
-Virtual Page = 13
-Position = 1664
+PageIn->virtualPage = 5
 PageIn->valid = 1
 PageIn->dirty = 1
-PageOut->virtualPage = 0
-PageOut->valid = 1
-PageOut->dirty = 0
-Ya la pagina existe en memoria
-
-Virtual Page = 5
-Position = 640
-PageIn->valid = 1
-PageIn->dirty = 0
 PageOut->virtualPage = 4
 PageOut->valid = 1
 PageOut->dirty = 0
 Ya la pagina existe en memoria
 
-Virtual Page = 0
-Position = 0
+PageIn->virtualPage = 4
 PageIn->valid = 1
 PageIn->dirty = 0
-PageOut->virtualPage = 1
+PageOut->virtualPage = 6
 PageOut->valid = 1
-PageOut->dirty = 0
+PageOut->dirty = 1
+Busca en el ejecutable ../test/addrspacetest
+
+PageIn->virtualPage = 9
+PageIn->valid = 0
+PageIn->dirty = 0
+PageOut->virtualPage = 7
+PageOut->valid = 1
+PageOut->dirty = 1
+Limpia zona de stack/DNI
+
+PageIn->virtualPage = 10
+PageIn->valid = 0
+PageIn->dirty = 0
+PageOut->virtualPage = 8
+PageOut->valid = 1
+PageOut->dirty = 1
+Limpia zona de stack/DNI
+
+PageIn->virtualPage = 11
+PageIn->valid = 0
+PageIn->dirty = 0
+PageOut->virtualPage = 9
+PageOut->valid = 1
+PageOut->dirty = 1
+Limpia zona de stack/DNI
+
+PageIn->virtualPage = 12
+PageIn->valid = 0
+PageIn->dirty = 0
+PageOut->virtualPage = 10
+PageOut->valid = 1
+PageOut->dirty = 1
+Limpia zona de stack/DNI
+
+PageIn->virtualPage = 13
+PageIn->valid = 1
+PageIn->dirty = 1
+PageOut->virtualPage = 11
+PageOut->valid = 1
+PageOut->dirty = 1
 Ya la pagina existe en memoria
 
-No threads ready or runnable, and no pending interrupts.
-Assuming the program completed.
-Machine halting!
-
-Ticks: total 147, idle 0, system 70, user 77
-Disk I/O: reads 880, writes 0
-Console I/O: reads 0, writes 103
-Paging: faults 13
-Network I/O: packets received 0, sent 0
-
-Cleaning up...

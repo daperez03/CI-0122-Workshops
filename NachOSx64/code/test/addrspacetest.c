@@ -26,7 +26,7 @@ jklmnopqrstuvwxy
 */
 
 void main () {
-	int i = 0, j = 0;
+	int i = 1, j = 0;
 	char buffer[1024];
 
 	for (j = 0; j < 1024; j++) {

@@ -26,13 +26,36 @@ class Thread;
 class AddrSpace {
   public:
     #ifdef VM
+    /// @brief Crea una instancia de AddrSpace
+    /// @param executable Ejecutable con el binario ejecutable
+    /// @param programName Nombre del archivo ejecutable
     AddrSpace(OpenFile* executable, const char* programName);
+    /// @brief Crea una instancia de AddrSpace a partit de otra instancia
+    /// @param father Instancia que se desea copiar
+    /// @param thread Identificador del hilo que se le atribuye la instancia
     AddrSpace(const AddrSpace& father, Thread* thread);
+    /// @brief Habilita una pagina en memoria
+    /// @param availablePage Variable en la que se colocara el numero de pagina
+    /// @param pageOut Contendra un puntero a la TranslationEntry a remplazar
     void FindPage(int& availablePage, TranslationEntry*& pageOut);
+    /// @brief Genera una tabla de punteros a los TranslationEntry
+    /// en memoria fisica
+    /// @return Puntero a la tabla
     TranslationEntry** getPhysicalPageTable();
+    /// @brief Actualiza las tablas de la page table respecto a TLB
     void updataPageTables();
+    /// @brief Implementacion de sustitucion secondChance
+    /// @param table Table sobre la que se desea realizar el replace
+    /// @param index Indice actual del algoritmo
+    /// @param range Rango de la tabla
+    /// @return Pagina que se debe remplazar
     TranslationEntry* secondChance(
       TranslationEntry* table, int& index, int range);
+    /// @brief Implementacion de sustitucion secondChance
+    /// @param table Table sobre la que se desea realizar el replace
+    /// @param index Indice actual del algoritmo
+    /// @param range Rango de la tabla
+    /// @return Pagina que se debe remplazar
     TranslationEntry* secondChance(
       TranslationEntry** table, int& index, int range);
     #else
