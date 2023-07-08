@@ -18,16 +18,13 @@ void BackingStore::pageIn(TranslationEntry* pageIn,
     char* buffer = new char[PageSize];
     bzero(buffer, PageSize);
     memcpy(buffer, address, PageSize);
-    ASSERT(!memcmp(buffer, address, PageSize));
     this->backingStore.insert(pageOut, buffer);
-    char* src = this->backingStore[pageIn];
-    ASSERT(src);
-    bzero(address, PageSize);
-    memcpy(address, src, PageSize);
-    ASSERT(!memcmp(address, src, PageSize));
-    this->backingStore.remove(pageIn);
-    delete src;
   }
+  char* src = this->backingStore[pageIn];
+  bzero(address, PageSize);
+  memcpy(address, src, PageSize);
+  this->backingStore.remove(pageIn);
+  delete src;
 }
 
 void BackingStore::pageOut(TranslationEntry* pageOut) {
@@ -41,7 +38,6 @@ void BackingStore::pageOut(TranslationEntry* pageOut) {
     char* buffer = new char[PageSize];
     bzero(buffer, PageSize);
     memcpy(buffer, address, PageSize);
-    ASSERT(!memcmp(address, buffer, PageSize));
     this->backingStore.insert(pageOut, buffer);
     bzero(address, PageSize);
   }

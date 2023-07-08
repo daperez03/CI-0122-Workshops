@@ -278,11 +278,10 @@ void AddrSpace::PageFaultException() {
       delete executable;
     }
   } else DEBUG('D', "Ya la pagina existe en memoria\n\n");
-  ASSERT(pageOut);
-  ASSERT(pageIn);
   pageIn->valid = true;
   pageIn->use = true;
   // Escribe en cache su remplazo
+  bzero(pageOut, sizeof(TranslationEntry));
   memcpy(pageOut, pageIn, sizeof(TranslationEntry));
 }
 
