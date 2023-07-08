@@ -149,13 +149,13 @@ AddrSpace::~AddrSpace() {
         &machine->mainMemory[currentPage * PageSize];
       bzero(address, PageSize);
     } else if (this->pageTable[i].valid &&
-      !this->pageTable[i].readOnly) {
+      this->pageTable[i].dirty) {
       char* buffer = backingStore->remove(&this->pageTable[i]);
       delete buffer;
     }
   }
   invertedTable.remove(currentThread);
-  delete pageTable;
+  delete this->pageTable;
 }
 
 //----------------------------------------------------------------------
@@ -269,7 +269,7 @@ void AddrSpace::PageFaultException() {
       int physicalPosition = noffH.code.inFileAddr + position;
       int executableSize = noffH.code.size + noffH.initData.size;
       bzero(into, PageSize);
-      if ((int)vpn <= divRoundUp(executableSize, PageSize)) {
+      if ((int)vpn < divRoundUp(executableSize, PageSize)) {
         DEBUG('D', "Busca en el ejecutable %s\n\n", this->file);
 
         stats->numDiskReads +=
